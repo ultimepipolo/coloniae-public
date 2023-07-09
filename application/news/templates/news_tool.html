@@ -1,0 +1,249 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Article editor - Coloniae{% endblock %}
+
+{% block corps %}
+<!-- Articles -->
+<div class="ui container fluid">
+    <h1 class="ui center aligned header">Article editor</h1>
+
+    <div id="article_form" class="ui loading form">
+      <div class="field">
+        <label>Caracteristics</label>
+        <p>ID {{article_global_contents['nid']}}</p>
+        <p>Author: {{article_global_contents['author']}}</p>
+        <p>Last save: <span name="date">{{article_global_contents['lastupdate']}}</span></p>
+      </div>
+      <div class="field">
+        <label>Title</label>
+        <textarea rows="1" id="article_title"></textarea>
+      </div>
+      <div class="field">
+        <label>Description <i style="margin-left: 5px">this will appear as a short description on the landing page, no more than 255 characters (<span id="article_resume_count">0</span>/255)</i></label> 
+        <textarea id="article_resume" type="text" rows="2"></textarea>
+      </div>
+      <div class="field">
+        <label>Contents</label> 
+        <textarea id="article_contents" type="text" style="width: 100%;height: 500px;"></textarea>
+      </div>
+      {% if article_global_contents['nid']!=0 %}
+      <div class="field">
+        <label>Image <i style="margin-left: 5px">this banner image is necessary, and it has to be a 770*130 pixels, .jpg file</i></label> 
+        <div class="two fields">
+          <div class="field">
+            <input id="article_image" type="file", accept=".jpg"></input>
+          </div>
+          <div class="field">
+            <button class="ui fluid button" id="button_upload_image" onclick="upload_image_to_coloniae()" disabled="">Upload image <i style="margin-left: 5px">(this is separated from "Save")</i></button>
+          </div>
+        </div>
+        <img id="article_image_preview" class="ui centered image" style="width: 660px;" alt="No image was found.">
+      </div>
+      {% endif %}
+      <div class="field">
+        <div class="ui checkbox">
+          <input type="checkbox" tabindex="0" id="checkbox_article_hidden">
+          <label>Keep hidden  <i style="margin-left: 5px">the article should remain hidden until it's ready to be published</i></label>
+        </div>
+      </div>
+      <button class="ui button" onclick="save_to_coloniae()">Save</button>
+      <button class="ui button" onclick="update_publication_date()">Publish <i style="margin-left: 5px">(updates creation date)</i></button>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script src="/static/lib/tinymce/js/tinymce/tinymce.min.js"></script>
+<script>
+var textarea = document.getElementById('article_contents');
+
+$(document).ready(function(){
+  // load saved article
+  window.article_global_contents = {{article_global_contents | tojson}};
+  tinymce.init({
+    selector: '#article_contents',
+    plugins: 'print preview paste importcss searchreplace autolink code visualblocks visualchars fullscreen image link media codesample table charmap hr pagebreak nonbreaking toc advlist lists wordcount help charmap',
+    menubar: 'edit view insert format tools table help',
+    menu: {
+      format: { title: 'Format', items: 'bold italic underline strikethrough superscript subscript codeformat | blockformats align | forecolor backcolor | removeformat' }
+    },
+    toolbar: 'undo redo | bold italic underline strikethrough formatselect | alignleft aligncenter alignright alignjustify | outdent indent |  numlist bullist | forecolor backcolor removeformat | fullscreen  preview',
+    content_css: '/static/lib/semantic/semantic.min.css',
+    setup: function (editor) {
+      editor.on('init', function (e) {
+        editor.setContent(article_global_contents.contents);
+      });
+    }
+  });
+  document.getElementById('article_title').value = article_global_contents.title;
+  document.getElementById('article_resume').value = article_global_contents.resume;
+  document.getElementById('checkbox_article_hidden').checked = article_global_contents.hidden;
+  {% if article_global_contents['nid']!=0 %}
+  $('#button_upload_image').prop('disabled', true);
+  document.getElementById('article_image_preview').src = '/static/media/uploads/article_banner_{{article_global_contents['nid']}}.jpg';
+  //binds to onchange event of your input field
+  $('#article_image').bind('change', function () {
+    image_picked(this); // pass this as argument 
+  });
+  {% endif %}
+  // initialize words counter
+  $("#article_resume").keyup(function(){
+    $("#article_resume_count").html(this.value.length);
+  });
+
+  document.getElementById('article_form').classList.remove('loading');
+
+
+});
+
+function image_picked (input_elem){
+    if (input_elem.files && input_elem.files[0]) {
+      var img = new Image();
+      img.src = URL.createObjectURL(input_elem.files[0]); // set src to blob url
+      img.onload = function () {
+        // validate the image and allow upload if good
+        if (this.naturalWidth==770 && this.naturalHeight==130) {
+          // continue
+          if (input_elem.files[0].type == 'image/jpeg') {
+            //continue
+            if (input_elem.files[0].size < 1000000) {
+              // continue and upload
+              alert('The image is valid. Upload it by clicking "upload image".');
+              $('#button_upload_image').prop('disabled', false);
+              return;
+            } else {
+              alert('Error - the image is over 1MB of size.');
+              input_elem.value = '';
+              return;
+            }
+          } else {
+            alert('Error - the extension should be .jpg or .jpeg.');
+            input_elem.value = '';
+            return;
+          }
+        } else {
+          alert('Error - wrong dimensions, please select a 770*130 pixels image.');
+          input_elem.value = '';
+          return;
+        }
+      };
+    }
+  };
+
+function upload_image_to_coloniae() {
+  document.getElementById('article_form').classList.add('loading');
+  var article_id = article_global_contents.nid;
+  if (article_id==''){
+    article_id = 0;
+  }
+  if (article_id==0) {
+    alert('For technical reasons, please "Save" below once before uploading an image.');
+    document.getElementById('article_form').classList.remove('loading');
+    return;
+  }
+  var form_data = new FormData();
+  var file_data = $("#article_image").prop("files")[0];
+  if (!file_data) {
+    alert('No file to upload.');
+    document.getElementById('article_form').classList.remove('loading');
+    return;
+  }
+  form_data.append("file", file_data);
+  $.ajax({
+    url: Flask.url_for('news.news_upload_image', {'nid':article_id}),
+    cache: false,
+    contentType: false,
+    processData: false,
+    async: true,
+    data: form_data,
+    type: 'post',
+    success: function(data) {
+        document.getElementById('article_form').classList.remove('loading');
+        if (data.outcome) {
+          alert('Image successfully uploaded.');
+          document.getElementById('article_image_preview').src = '/static/media/uploads/article_banner_'+article_id+'.jpg?'+Math.round((new Date()).getTime());
+          $('#button_upload_image').prop('disabled', true);
+        } else {
+          alert('There was an error : '+data.message)
+        }
+    },
+    error: function(data) {
+      document.getElementById('article_form').classList.remove('loading');
+      alert('Error '+data);
+    }
+  });
+}
+
+function save_to_coloniae() {
+  document.getElementById('article_form').classList.add('loading');
+  var article_title = document.getElementById('article_title').value;
+  var article_resume = document.getElementById('article_resume').value;
+  var article_contents = tinymce.activeEditor.getContent();
+  var article_hide = document.getElementById('checkbox_article_hidden').checked;
+  if (article_hide) {
+    article_hide = 1
+  } else {
+    article_hide = 0
+  }
+	var article_id = article_global_contents.nid;
+	if (article_id==''){
+		article_id = 0;
+	}
+  var data_to_send = {
+		'article_title' : article_title,
+		'article_contents': article_contents,
+    'article_resume': article_resume,
+		'article_hide': article_hide
+	};
+	var xhttp = new XMLHttpRequest();
+	xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			data = JSON.parse(this.responseText);
+      document.getElementById('article_form').classList.remove('loading');
+			alert(data.outcome);
+			if (data.nid) {
+        if (data.nid!=article_id) {
+          $("<a />", {
+  				"href" : Flask.url_for('news.news_tool', {'nid':data.nid}),
+  				}).appendTo("body").click(function() {
+  					$(this).remove() 
+  				})[0].click();
+          return;
+        }
+				document.getElementById('article_server_id').innerHTML = data.nid;
+				document.getElementById('article_last_save').innerHTML = (new Date(data.ndate*1000)).toLocaleString();
+			}
+    }
+	};
+	xhttp.open("POST", Flask.url_for('news.news_save', {'nid':article_id}), true);
+	xhttp.setRequestHeader("Content-type", "application/json");
+	xhttp.send(JSON.stringify(data_to_send));
+}
+
+function update_publication_date() {
+	var article_id = article_global_contents.nid;
+	if (article_id==''){
+		article_id = 0;
+	}
+  if (article_id==0) {
+    alert('Please save before publishing!');
+    return;
+  }
+  var data_to_send = {
+		'event' : 'publication-date',
+    'data'  : '1'
+	};
+	var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			data = JSON.parse(this.responseText);
+			alert(data.outcome);
+    }
+	};
+	xhttp.open("POST", Flask.url_for('news.news_update', {'nid':article_id}), true);
+	xhttp.setRequestHeader("Content-type", "application/json");
+	xhttp.send(JSON.stringify(data_to_send));
+}
+</script>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends "squelette.html" %}
+
+{% block titre %}{{attribute}} of {{charter}} (ADU) - Coloniae{% endblock %}
+
+{% block corps %}
+<div class="container-fluid">
+
+<div id="container" class="pb-1" style="height:700px"></div>
+<button id="toggle" class="btn btn-secondary">Toggle all</button>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.highcharts.com/stock/highstock.js"></script>
+<script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+<script>
+var stats_e = {'All':'All', 'age':'Age', 'approval':'Approval', 'gdp':'GDP', 'gdpAnuallyAdjusted':'Annual GDP Adjusted', 'gdpGrowthAnnually':'Annual GDP Growth', 'gdpGrowthQuarterly':'Quarterly GDP Growth', 'gdpQuarterlyAdjusted':'Quarterly GDP Adjusted', 'health':'Health', 'iq':'IQ', 'jobs':'Jobs', 'mediansalary':'Median Salary', 'ndp':'Net Domestic Product', 'new GDP': 'New GDP', 'population': 'Population', 'priceIndex': 'Price Index', 'priceIndexAnualBasis': 'Annual Basis Price Index', 'savings': 'Average Savings', 'students':'Students', 'homeless':'Homeless', 'newGDP':'New GDP', 'unemployment':'Unemployment', 'workforce':'Workforce'};
+function findGetParameter(parameterName) {
+    var result = null,
+        tmp = [];
+    var items = location.search.substr(1).split("&");
+    for (var index = 0; items.length > index; index++) {
+        tmp = items[index].split("=");
+        if (tmp[0] === parameterName) result = decodeURIComponent(tmp[1]);
+    }
+    return result;
+}
+var global_name = findGetParameter('name');
+var global_field = findGetParameter('field');
+if (global_field=='st') {
+    var global_attrname = stats_e['{{attribute}}'].replace(/_/g, ' ');
+} else {
+    var global_attrname = '{{attribute}}'.replace(/_/g, ' ');
+}
+if (global_name!=null) {
+    document.title = global_attrname+' of '+global_name+' (ADU) - Coloniae';
+} else {
+    document.title = global_attrname+' of '+char_to_name['{{charter}}']+' (ADU) - Coloniae';
+}
+
+Highcharts.setOptions({
+    time: {
+        useUTC: false
+    }
+});
+// create the chart
+$('#container').highcharts('StockChart', {
+
+    chart: {
+        zoomType: 'x'
+    },
+    
+    tooltip: {
+        split: false
+    },
+
+    rangeSelector: {
+
+        buttons: [{
+            type: 'day',
+            count: 1,
+            text: '1d'
+        },{
+            type: 'day',
+            count: 3,
+            text: '3d'
+        }, {
+            type: 'week',
+            count: 1,
+            text: '1w'
+        }, {
+            type: 'month',
+            count: 1,
+            text: '1m'
+        }, {
+            type: 'month',
+            count: 6,
+            text: '6m'
+        }, {
+            type: 'year',
+            count: 1,
+            text: '1y'
+        }, {
+            type: 'all',
+            text: 'All'
+        }],
+        selected: 3
+    },
+	
+	  xAxis: {
+        type: 'datetime',
+        dateTimeLabelFormats: {
+            second: '%d %B %Y<br/>%H:%M:%S',
+            minute: '%d %B %Y<br/>%H:%M',
+            hour: '%d %B %Y<br/>%H:%M',
+            day: '%d %B %Y',
+            week: '%d %B %Y',
+            month: '%B %Y',
+            year: '%Y'
+	    }
+    },
+    
+    title: {
+        text: 'Chart of '+global_attrname
+    },
+
+    subtitle: {
+        text: 'Time is displayed in your timezone.'
+    },
+    
+    legend: {
+        enabled : true,
+        layout: 'horizontal',
+        align: 'center',
+        verticalAlign: 'bottom'
+    },
+
+    series: {{chartseries | tojson}}
+});
+
+// the button action
+var chart = $('#container').highcharts(),
+$button = $('#toggle');
+$button.click(function() {
+    var series = chart.series[0];
+    if (series.visible) {
+        $(chart.series).each(function(){
+            //this.hide();
+            this.setVisible(false, false);
+        });
+        chart.redraw();
+    } else {
+        $(chart.series).each(function(){
+            //this.show();
+            this.setVisible(true, false);
+        });
+        chart.redraw();
+    }
+});
+
+</script>
+{% endblock %}

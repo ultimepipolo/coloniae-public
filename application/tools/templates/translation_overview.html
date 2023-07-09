@@ -1,0 +1,91 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Translation Overview - Coloniae{% endblock %}
+
+{% block corps %}
+<div class="ui text container fluid">
+
+  <h1 class="ui center aligned header">Translation Project for MC2 overview</h1>
+
+  <p>Statistics about the translation project for MC2.</p>
+
+</div>
+
+<div class="ui text container fluid" style="margin-top:3%">  
+	<div id="main_progress_div">
+	  <div class="ui segment" style="height:100px;">
+	    <div class="ui active inverted dimmer">
+	      <div class="ui text loader">Loading data from server...</div>
+	    </div>
+	  </div>
+	</div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script type="text/javascript">
+function formatReadableList(t_li) {
+  if (t_li.length==0) {return '';}
+  let t_resp = t_li[0];
+  if (t_li.length>1) {
+    for (let i = 1; t_li.length-1 > i ; i++) { //do not take the last and the first
+      t_resp += ', '+t_li[i];
+    }
+    t_resp += ' and '+t_li[t_li.length-1];
+  }
+  return t_resp;
+}
+
+$( document ).ready(function() {
+  $.getJSON('{{ url_for('api.trsoverview') }}', function(result){
+    // Create the progress bars
+    let tmp_html = '  <div class="ui two column grid">';
+    for (var i = result.length - 1; i >= 0; i--) {
+      let working_on = result[i];
+      let translators = [];
+      let proofreaders = [];
+      for (var j = working_on.users.length - 1; j >= 0; j--) {
+        let user = working_on.users[j];
+        if (user.role == 1) {
+          translators.push('<a href="'+Flask.url_for('main.player', {'username':user.ape_account})+'">'+user.ape_account+'</a>');
+        } else if (user.role == 2) {
+          proofreaders.push('<a href="'+Flask.url_for('main.player', {'username':user.ape_account})+'">'+user.ape_account+'</a>');
+        }
+      }
+      let pf_string = 'No proofreader';
+      if (proofreaders.length > 0) {
+        pf_string = 'Proofreader : '+proofreaders[0];
+      }
+      tmp_html += `
+    <div class="ui column">
+      <h3>Language : <b>`+working_on.language+`</b></h3>
+      <div class="ui container center aligned">
+        <p>Translation</p>
+      </div>
+      <div class="ui teal progress" data-percent="`+Math.round(working_on.translated*100/working_on.total)+`">
+        <div class="bar">
+          <div class="progress"></div>
+        </div>
+        <div class="label">`+working_on.translated+` strings out of `+working_on.total+`</div>
+      </div>
+      <div class="ui container center aligned">
+        <p>Proofreading</p>
+      </div>
+      <div class="ui teal progress" data-percent="`+Math.round(working_on.proofread*100/working_on.total)+`">
+        <div class="bar">
+          <div class="progress"></div>
+        </div>
+        <div class="label">`+working_on.proofread+` strings out of `+working_on.total+`</div>
+      </div>
+      <p>Translators : `+formatReadableList(translators)+`</p>
+      <p>`+pf_string+`</p>
+    </div>`;
+    }
+    tmp_html += '  </div>';
+    document.getElementById('main_progress_div').innerHTML = tmp_html;
+    $('.ui.progress').progress();
+  });
+});
+</script>
+{% endblock %}

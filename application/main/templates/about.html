@@ -1,0 +1,23 @@
+{% extends "squelette.html" %}
+
+{% block titre %}About - Coloniae{% endblock %}
+
+{% block corps %}
+<!-- Articles -->
+<div class="ui main text container">
+    <h1 class="ui center aligned header">About Coloniae</h1>
+    <p>Sobeirannovaocc aka Sobe first started to play around with the API of My Colony in April 2017. Coloniae was created and first launched on the 22nd of August 2018. Version 2 of Coloniae was launched on 5 January 2019, and version 3 went online on 11 January 2020.<br>Background image : <a href="{{url_for('main.colonies', charter='r0dO4wnS')}}">Bentushiya</a>, <a href="{{url_for('main.player', username='Showhow')}}">Showhow</a>.</p>
+    <div class="ui divider"></div>
+    <h3>Help translate My Colony</h3>
+    <p>Pavlxiiv and I are running a translation project for My Colony. To help translate the game in your native language, simply join this discord server : <a href="https://discord.gg/zMP2tMf" target="_blank">zMP2tMf</a> or contact Pavlxiiv or me on the <a href="https://www.ape-apps.com/viewpage.php?p=25772" target="_blank">official thread</a>.</p>
+    <div class="ui divider"></div>
+    <h3>Contact</h3>
+    <p>Send feedback, propose new features, or report a bug <i>regarding Coloniae</i> (I do not provide support for My Colony in general) (by order of preference):
+      <ul class="ui list">
+          <li>Discord : Ultime#2982</li>
+          <li>Forum : <a href="https://www.ape-apps.com/profile.php?u=Sobeirannovaocc" target="_blank">Sobeirannovaocc</a> (<a href="https://www.ape-apps.com/viewpage.php?p=25178" target="_blank">Coloniae Official Thread</a>)</li>
+          <li>Email : ultimepipolo@gmail.com</li>
+      </ul>
+    </p>
+</div>
+{% endblock %}

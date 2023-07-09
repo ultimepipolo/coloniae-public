@@ -1,0 +1,669 @@
+{% extends "squelette.html" %}
+
+{% block titre %}{{name}} - Coloniae{% endblock %}
+
+{% block corps %}
+<div class="ui container fluid">
+  <h1 class="ui center aligned header" style="margin-bottom: 3%;">{{name}}, a colony of <a href="{{url_for('main.player', username=owner)}}" target="_blank"><span name="badge">{{owner}}</span></a></h1>
+
+  <div class="ui grid stackable">
+    <div class="four wide column">
+      <img src='https://www.my-colony.com/screenshots/flag-{{colonyid}}.jpg' loading="lazy" style="width:100%;margin-bottom: 10px;" alt="" onerror="javascript:this.style.display='none';"></img>
+      <div class="mx-header"><i class="sort numeric up icon"></i>Rankings</div>
+      <div class="ui segments custom-segments" id="rankablediv">
+      </div>
+      <div class="mx-header" style="margin-top: 3%;"><i class="chart bar outline icon"></i>Latest Stats</div>
+      <div class="ui segments custom-segments" id="chart_header">
+      </div>
+      <div class="mx-header" style="margin-top: 3%;"><i class="linkify icon"></i>Links</div>
+      <div class="ui segments custom-segments">
+        <div class="ui segment">
+          <a href='https://mc1.my-colony.com/colonies/{{charter}}' target='_blank'>View on My Colony</a>
+        </div>
+        <div class="ui segment">
+          {% if aducol %}
+          <a href="{{url_for('adu.adu_view', charter=charter)}}">View on ADU</a>
+          {% else %}
+          ADU disabled
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="twelve wide column">
+      <div id="main_tab" class="ui top attached tabular stackable menu">
+        <a class="item active" data-tab="infodiv" onclick="javascript:load_infodiv()">History Charts</a>
+        <a class="item" data-tab="cwdiv" onclick="javascript:load_cwdiv()">Commonwealth</a>
+        <a class="item" data-tab="gbtdiv" onclick="javascript:load_gbtdiv()">Market Contracts</a>
+        <a class="item" data-tab="gbthistdiv" onclick="javascript:load_gbthistdiv()">Market History</a>
+        <a class="item" data-tab="namehistdiv" onclick="javascript:load_namehistdiv()">Naming History</a>
+      </div>
+      <div class="ui bottom attached active tab segment" id="infodiv" data-tab="infodiv" style="min-height:600px"></div>
+      <div class="ui bottom attached tab segment" id="cwdiv" data-tab="cwdiv" style="min-height:600px"></div>
+      <div class="ui bottom attached tab segment" id="gbtdiv" data-tab="gbtdiv" style="min-height:600px;max-height: 1010px;overflow: auto;"></div>
+      <div class="ui bottom attached tab segment" id="gbthistdiv" data-tab="gbthistdiv" style="min-height:600px"></div>
+      <div class="ui bottom attached tab segment" id="namehistdiv" data-tab="namehistdiv" style="min-height:600px"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.highcharts.com/stock/highstock.js"></script>
+<script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+<script src="https://code.highcharts.com/stock/modules/export-data.js"></script>
+
+<script type="text/javascript" src="/static/lib/timeago/timeago.js"></script>
+
+<script src="/static/js/daily/ranked_dict.js"></script>
+<!-- styling the gbt like in game -->
+<link rel="stylesheet" href="/static/css/gbt.css">
+
+<script>
+function load_namehistdiv(){
+  if (document.getElementById('namehistdiv').innerText!='') {return;}
+  document.getElementById('namehistdiv').innerHTML = '<div class="ui container fluid"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+  $.ajax({
+    type: 'GET',
+    url: '{{url_for('api.naminghistory', charter=charter)}}',
+    dataType: 'json',
+    success: function (data) {
+        var thtml = '<div class="ui four column grid" style="margin-top:5%"><div class="column"><h4>From</h4></div><div class="column"><h4>Until</h4></div><div class="column"><h4>Name</h4></div><div class="column"><h4>Charter</h4></div>';
+        for (var i = data.length - 1; i >= 0; i--) {
+          var t_obj = data[i];
+          if (t_obj.to == null) {
+            thtml += '<div class="column">'+(new Date(Number(t_obj.from)*1000)).toLocaleDateString({ timeZone: 'UTC' })+'</div><div class="column">Now</div><div class="column">'+t_obj.name+'</div><div class="column">'+t_obj.charter+'</div>';
+          } else {
+            thtml += '<div class="column">'+(new Date(Number(t_obj.from)*1000)).toLocaleDateString({ timeZone: 'UTC' })+'</div><div class="column">'+(new Date(Number(t_obj.to)*1000)).toLocaleDateString({ timeZone: 'UTC' })+'</div><div class="column">'+t_obj.name+'</div><div class="column">'+t_obj.charter+'</div>';
+          }
+        }
+        document.getElementById('namehistdiv').innerHTML = thtml;
+    }
+  });
+}
+
+function load_gbthistdiv(){
+  if (document.getElementById('gbthistdiv').innerText!='') {return;}
+  document.getElementById('gbthistdiv').innerHTML = '<div class="ui container fluid"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+  if (!window.catalog && !window.catalogid) {
+    get_catalog(function(){get_catalogid(add_gbthist_tables);});
+    return;
+  }
+  if (!window.catalog) {
+    get_catalog(add_gbthist_tables);
+    return;
+  }
+  if (!window.catalogid) {
+    get_catalogid(add_gbthist_tables);
+    return;
+  }
+  add_gbthist_tables();
+  return;
+}
+
+function load_gbtdiv(){
+  if (document.getElementById('gbtdiv').innerText!='') {return;}
+  document.getElementById('gbtdiv').innerHTML = '<div class="ui container fluid"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+  $.ajax({
+    type: 'GET',
+    url: 'https://mc1.my-colony.com/api.php?pf=4&g=1',
+    dataType: 'json',
+    success: function (data) {
+        document.getElementById('gbtdiv').innerHTML = '';
+        if (!window.catalog) {
+          get_catalog(function(){
+            parseAvgPrices(data, (new Date()), '{{charter}}', '{{mycolony_version}}');
+          });
+          return;
+        }
+        parseAvgPrices(data, (new Date()), '{{charter}}', '{{mycolony_version}}');
+        return;
+    }
+  });
+}
+
+function load_cwdiv() {
+  var tabname = 'cwdiv';
+  if (document.getElementById(tabname).innerText!='') {return;}
+  document.getElementById('cwdiv').innerHTML = '<div class="ui container fluid"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+  if (part_of_cw['is_inde']) {
+    $.ajax({
+        type: 'GET',
+        url: '{{url_for('api.activecwmembers', charter=charter)}}',
+        datType: 'json',
+        success: function (dat) {
+            string = '<p>This colony is an independent Commonwealth with a CW size of <b>'+dat.length+'</b>. The following colonies account for this Commonwealth size :</p><table class="ui celled table"><thead><tr><th>Name</th><th>Owner</th><th>Population</th><th>GDP</th><th>Active days</th><th>Accounting</th><tr></thead><tbody>';
+            for (var i=0; dat.length>i ;i++) {
+                string += '<tr><td><a href="{{url_for('main.colonies', charter='')}}'+dat[i].child_charter+'">'+dat[i].child_name+'</a></td><td><a href="{{url_for('main.player', username='')}}'+dat[i].child_owner+'">'+formatThisName(dat[i].child_owner)+'</a></td><td>'+dat[i].child_population+'</td><td>'+dat[i].child_gdp+'</td><td>'+dat[i].child_timesactive+'</td><tr>';
+            }
+            string += '</tbody></table><p class="font-italic">Active days is the number of days the colony was played during the last 7 days.<br>To be counted in the CW size, a colony has to have been played at least 3 days during the past 7 days and not belong to the owner of the Commonwealth (the colonies you make under yourself don\'t count).<br>For technical reasons the GDP and population values might be off by a few days. Check the colony\'s page to be sure.</p>';
+            document.getElementById(tabname).innerHTML = string;
+        },
+        error: function(XMLHttpRequest, textStatus, errorThrown) { 
+            console.log('error');
+            document.getElementById(tabname).innerHTML = "Status: " + textStatus+"Error: " + errorThrown;
+        }
+    });
+  } else {
+    $.ajax({
+        type: 'GET',
+        url: '{{url_for('api.activecwmembers', charter='')}}'+part_of_cw['mothercharter'],
+        datType: 'json',
+        success: function (dat) {
+            string = '<p>This colony is part of the Commonwealth of <a href="{{url_for('main.colonies', charter='')}}'+part_of_cw['mothercharter']+'">'+char_to_name[part_of_cw['mothercharter']]+'</a> which has a CW size of <b>'+dat.length+'</b>. The following colonies account for this Commonwealth size :</p><table class="ui celled table"><thead><tr><th>Name</th><th>Owner</th><th>Population</th><th>GDP</th><th>Active days</th><tr></thead><tbody>';
+            for (var i=0; dat.length>i ;i++) {
+                string += '<tr><td><a href="{{url_for('main.colonies', charter='')}}'+dat[i].child_charter+'">'+dat[i].child_name+'</a></td><td><a href="{{url_for('main.player', username='')}}'+dat[i].child_owner+'">'+formatThisName(dat[i].child_owner)+'</a></td><td>'+dat[i].child_population+'</td><td>'+dat[i].child_gdp+'</td><td>'+dat[i].child_timesactive+'</td><tr>';
+            }
+            string += '</tbody></table><p class="font-italic">Active days is the number of days the colony was played during the last 7 days.<br>To be counted in the CW size, a colony has to have been played at least 3 days during the past 7 days and not belong to the owner of the Commonwealth (the colonies you make under yourself don\'t count).<br>For technical reasons the GDP and population values might be off by a few days. Check the colony\'s page to be sure.</p>';
+            document.getElementById(tabname).innerHTML = string;
+        },
+        error: function(XMLHttpRequest, textStatus, errorThrown) { 
+            console.log('error');
+            document.getElementById(tabname).innerHTML = "Status: " + textStatus+"Error: " + errorThrown;
+        }
+    });
+  }
+}
+
+function load_infodiv(){
+  var tabname = 'infodiv';
+  if (document.getElementById(tabname).innerText!='') {return;}
+  document.getElementById(tabname).innerHTML = '<div class="ui container fluid"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+  $.getJSON('{{ url_for('api.colonyinfo', charter=charter) }}', function(result){
+    // Create the chart
+    document.getElementById(tabname).innerHTML = '';
+    var chart = Highcharts.stockChart('infodiv', {
+      rangeSelector: {
+        selected: 0
+      },
+
+      plotOptions: {
+        series: {
+          // general options for all series
+          turboThreshold: 3650,
+        }
+      },
+
+      tooltip: {
+        //valueDecimals: 0,    
+        formatter: function(tooltip) {
+          //console.log(this);
+          //return tooltip.defaultFormatter.call(this, tooltip);//+'<br>'+this.points[0].point.name;
+          var t_resp = '';
+          for (var i = this.points.length - 1; i >= 0; i--) {
+            t_resp+='<span style="color:'+this.points[i].series.color+'">\u25CF</span> '+this.points[i].series.name+' : <b>'+this.points[i].y.toLocaleString()+'</b><br>';
+          }
+          return t_resp+'<i>'+this.points[0].point.name+'<br>'+(new Date(this.points[0].x)).toLocaleDateString()+'</i>';
+        }
+      },
+      
+      legend: {
+        enabled :true,
+        align: 'center',
+        verticalAlign: 'top',
+      },
+
+      series: [
+        {
+          name: 'CW size',
+          data: result['cw_size'],
+          visible: false
+        },{
+          name: 'Population',
+          data: result['pop']
+        },{
+          name: 'GDP',
+          data: result['gdp'],
+          visible: false
+        }
+      ]
+    });
+    // compute subtitle
+    var t_li = [];
+    for (var i = 0; chart.series[1].options.data.length > i ; i++) {
+      var t_c = chart.series[1].options.data[i].name.substr(-9, 8);
+      if(!t_li.includes(t_c)) {
+        t_li.push(t_c);
+      }
+    }
+    if (t_li.length==1) {
+      var t_resp = 'This chart includes data from '+t_li[0]+'.';
+    } else {
+      var t_resp = 'This chart includes data from the linked colonies '+t_li[0];
+      for (var i = 1; t_li.length-1 > i ; i++) { //do not take the last and the first
+        t_resp += ', '+t_li[i];
+      }
+      t_resp += ' and '+t_li[t_li.length-1]+' (order of appearance).';
+    }
+    console.log(t_li);
+    chart.setTitle(null, { text: t_resp})
+  });
+}
+
+var badges_catalog = {{ badges_catalog | tojson }};
+var part_of_cw = {};
+$( document ).ready(function() {
+  // initialize tabs
+  $('#main_tab .item').tab();
+  load_infodiv()
+  // fetch current stats
+  var curr_string = '';
+  $.ajax({
+      type: 'GET',
+      url: 'https://mc1.my-colony.com/api.php?pf=2&g=1&c={{charter}}',
+      datType: 'json',
+      success: function (dat) {
+          var t_parsing_success = true;
+          try {
+              dat = JSON.parse(dat);
+          } catch (e) {
+              t_parsing_success = false;
+          }
+          if (t_parsing_success) {
+              if (dat['independence']=='0') {part_of_cw['is_inde'] = false} else {part_of_cw['is_inde'] = true}
+              part_of_cw['mothercharter'] = dat['mothercolony']['charter'];
+              var founded = new Date(dat['lastactive']+'Z');
+              if (dat['region']=='1') {var reg = 'yes'} else {var reg='no'}
+              curr_string += '<div class="ui segment">Last active<span style="float:right;" data-tooltip="'+founded.toLocaleString()+'">'+jQuery.timeago(new Date(founded))+'</span></div>';
+              curr_string += '<div class="ui segment">Created<span style="float:right;">'+dat['founded']+'</span></div>';
+              curr_string += '<div class="ui segment">Population<span style="float:right;" data-tooltip="'+Number(dat['population']).toLocaleString()+'">'+nFormatter(Number(dat['population']), 3)+'</span></div>';
+              curr_string += '<div class="ui segment">GDP<span style="float:right;" data-tooltip="'+Number(dat['gdp']).toLocaleString()+'">'+nFormatter(Number(dat['gdp']), 3)+'</span></div>';
+              curr_string += '<div class="ui segment">Unemployment<span style="float:right;">'+dat['unemployment']+' %</span></div>';
+              curr_string += '<div class="ui segment">Region<span style="float:right;">'+reg+'</span></div>';
+          } else {
+              curr_string = '<div class="ui segment">There was an error. Most likely the colony was deleted due to inactivity.</div>';
+          }
+          document.getElementById('chart_header').innerHTML = curr_string;
+
+      },
+      error: function(XMLHttpRequest, textStatus, errorThrown) { 
+          console.log('error');
+          document.getElementById('chart_header').innerHTML = "Status: " + textStatus+"Error: " + errorThrown;
+      }
+    });
+  if (ranked_dict.hasOwnProperty('{{charter}}')) {
+    document.getElementById('rankablediv').innerHTML = `
+    <div class="ui segment">Population<span style="float:right;">`+ranked_dict['{{charter}}'][0]+`</span></div>
+    <div class="ui segment">GDP<span style="float:right;">`+ranked_dict['{{charter}}'][1]+`</span></div>
+    <div class="ui segment">GDP per capita<span style="float:right;">`+ranked_dict['{{charter}}'][2]+`</span></div>
+    <div class="ui segment">CW size<span style="float:right;">`+ranked_dict['{{charter}}'][3]+`</span></div>
+    <div class="ui segment"><i>Rankings among `+Object.keys(ranked_dict).length+` active colonies.</i> <span data-tooltip="Rankings are among active colonies only (played 3 days during the last 7 days)."><i class="question circle outline icon"></i></span></div>`;
+  } else {
+    document.getElementById('rankablediv').innerHTML = '<div class="ui segment">This colony is not eligible for ranking. To be ranked a colony must be played at least 3 days during the last 7 days.</div>';
+  }
+  formatBadges();
+});
+
+function add_gbthist_tables(){
+  // get the script only now
+  $.ajax({
+    type: 'GET',
+    url: 'https://cdn.datatables.net/v/se/dt-1.10.20/datatables.min.js',
+    dataType: 'script',
+    cache:true,
+    success: function () {
+      $.ajax({
+      type: 'GET',
+      url: 'https://cdn.datatables.net/v/se/dt-1.10.20/datatables.min.css',
+      cache:true,
+      success: function (dt_css_styles) {
+        document.getElementById('gbthistdiv').innerHTML = `
+        <style>`+dt_css_styles+`</style>
+        <h4>Trades bought</h4>
+        <table id="gbthistdiv_table_bought" class="ui table">
+          <thead>
+            <tr>
+              <th>Got</th>
+              <th>On</th>
+              <th>From</th>
+              <th>In exchange of</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>Got</th>
+              <th>On</th>
+              <th>From</th>
+              <th>In exchange of</th>
+            </tr>
+          </tfoot>
+        </table>
+        <h4>Trades sold</h4>
+        <table id="gbthistdiv_table_sold" class="ui table">
+          <thead>
+            <tr>
+              <th>Colony</th>
+              <th>Got</th>
+              <th>On</th>
+              <th>In exchange of</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>Colony</th>
+              <th>Got</th>
+              <th>On</th>
+              <th>In exchange of</th>
+            </tr>
+          </tfoot>
+        </table>`;
+        $("#gbthistdiv_table_bought").DataTable({
+          searching: false,
+          order: [[1, "desc"]],
+          processing: true,
+          serverSide: true,
+          ajax: {
+            url: "{{url_for('api.chartertrades', charter=charter, typee='bought')}}",
+            data: function (data) {
+              return data;
+            }
+          },
+          columns: [
+            { data: "got" },
+            { data: "timesold" },
+            { data: "seller", orderable: false },
+            { data: "ieo" }
+          ],
+          columnDefs: [
+            {
+              targets: [2], // charters
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  return '<a target="_blank" href="'+Flask.url_for('main.colonies', {'charter':data})+'"">' +data +'</a>';
+                }
+                return data;
+              }
+            },
+            {
+              targets: [1], // time
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  return new Date(Number(data) * 1000).toLocaleString();
+                }
+                return data;
+              }
+            },
+            {
+              targets: [0], // got
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  if (row.offerflag == 1) {
+                    // got money (bought an offer)
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png" style="margin-right:10px;width: 30px;">' +
+                      Number(data).toLocaleString()
+                    );
+                  }
+                  if (row.offerflag == 0) {
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/'+window.catalog[window.catalogid[row.resourceid]]+'" style="margin-right:10px;width: 30px;">' + Number(data).toLocaleString()
+                    );
+                  }
+                }
+                return data;
+              }
+            },
+            {
+              targets: [3], // in exchange of
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  if (row.offerflag == 0) {
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png" style="margin-right:10px;width: 30px;">' +
+                      Number(data).toLocaleString()
+                    );
+                  }
+                  if (row.offerflag == 1) {
+                    // got money (bought an offer)
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/' +window.catalog[window.catalogid[row.resourceid]] +'" style="margin-right:10px;width: 30px;">' + Number(data).toLocaleString()
+                    );
+                  }
+                }
+                return data;
+              }
+            }
+          ]
+        });
+        $("#gbthistdiv_table_sold").DataTable({
+          searching: false,
+          order: [[2, "desc"]],
+          processing: true,
+          serverSide: true,
+          ajax: {
+            url: "{{url_for('api.chartertrades', charter=charter, typee='sold')}}",
+            data: function (data) {
+              return data;
+            }
+          },
+          columns: [
+            { data: "buyer", orderable: false },
+            { data: "got" },
+            { data: "timesold" },
+            { data: "ieo" }
+          ],
+          columnDefs: [
+            {
+              targets: [0], // charters
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  return '<a target="_blank" href="'+Flask.url_for('main.colonies', {'charter':data})+'"">' +data +'</a>';
+                }
+                return data;
+              }
+            },
+            {
+              targets: [2], // time
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  return new Date(Number(data) * 1000).toLocaleString();
+                }
+                return data;
+              }
+            },
+            {
+              targets: [1], // got
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  if (row.offerflag == 1) {
+                    // got money (bought an offer)
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png" style="margin-right:10px;width: 30px;">' +
+                      Number(data).toLocaleString()
+                    );
+                  }
+                  if (row.offerflag == 0) {
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/' +window.catalog[window.catalogid[row.resourceid]] +'" style="margin-right:10px;width: 30px;">' +Number(data).toLocaleString()
+                    );
+                  }
+                }
+                return data;
+              }
+            },
+            {
+              targets: [3], // in exchange of
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  if (row.offerflag == 0) {
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png" style="margin-right:10px;width: 30px;">' +
+                      Number(data).toLocaleString()
+                    );
+                  }
+                  if (row.offerflag == 1) {
+                    // got money (bought an offer)
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/' +window.catalog[window.catalogid[row.resourceid]] +'" style="margin-right:10px;width: 30px;">' +Number(data).toLocaleString()
+                    );
+                  }
+                }
+                return data;
+              }
+            }
+          ]
+        });
+        }
+      });
+    }
+  });
+}
+
+function get_catalog(callback) {
+  // this is {'resourcename':'image file name'}
+  $.ajax({
+    type: 'GET',
+    url: 'https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/game.js',
+    dataType: 'script',
+    cache:true,
+    success: function () {
+      window.catalog = {};
+      for (var i = window.ColonyGame.resources.length - 1; i >= 0; i--) {
+        var temp_res = window.ColonyGame.resources[i];
+        window.catalog[temp_res.name] = temp_res.icon;
+      }
+      callback();
+    }
+  });
+}
+
+function get_catalogid(callback) {
+  // this is {resourceid:'resource name'}
+  $.ajax({
+    type: 'GET',
+    url: 'https://mc1.my-colony.com/api.php?pf=1&g=1',
+    dataType: 'json',
+    cache:true,
+    success: function (data) {
+      window.catalogid = {};
+      for (var i = data.resources.length - 1; i >= 0; i--) {
+        var temp_res = data.resources[i];
+        window.catalogid[Number(temp_res.id)] = temp_res.name;
+      }
+      callback();
+    }
+  });
+}
+
+function nFormatter(num, digits) {
+  var si = [
+    { value: 1, symbol: "" },
+    { value: 1E3, symbol: " k" },
+    { value: 1E6, symbol: " M" },
+    { value: 1E9, symbol: " B" },
+    { value: 1E12, symbol: " T" },
+    { value: 1E15, symbol: " Q" },
+    { value: 1E18, symbol: " E" }
+  ];
+  var rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
+  var i;
+  for (i = si.length - 1; i > 0; i--) {
+    if (num >= si[i].value) {
+      break;
+    }
+  }
+  return (num / si[i].value).toFixed(digits).replace(rx, "$1") + si[i].symbol;
+}
+
+function percentagemore(a, b){return (b-a)/a;}
+
+var tml_offset = 0;
+function parseAvgPrices(data, date, pname, gameversion) {
+    tml_offset += 1;
+    var resdict = {}
+    for (var i=0; data.length > i; i++) {
+      if (!resdict.hasOwnProperty(data[i].resource)){resdict[data[i].resource] = []}
+      resdict[data[i].resource].push(data[i]);
+    }
+    //console.log(resdict);
+    var resavgs = {}  // PER 1 NOT PER 100
+    for (i in resdict) {
+      
+      if (!resavgs.hasOwnProperty(i)){resavgs[i] = 0}
+      for (var j=0; resdict[i].length > j; j++) {
+        resavgs[i] += resdict[i][j]['price']/resdict[i][j]['quantity'];
+      }
+      resavgs[i] = resavgs[i]/resdict[i].length;
+    }
+    //console.log(resavgs);
+	
+  	var GlobalAvgs = resavgs;
+  	var GlobalData = resdict;
+  	
+  	var expiringsoon = '';
+  	var tml = [];
+  	for (res in resdict) {
+  		for (var j=0; GlobalData[res].length > j; j++) {
+  			if (GlobalData[res][j]['sellercharter'] == pname){
+  				tml.push(new Date(GlobalData[res][j]['expires']+'Z'));
+  				var good_value = percentagemore(GlobalAvgs[res]*100, (GlobalData[res][j]['price']*100/GlobalData[res][j]['quantity']));
+  				if(GlobalData[res][j]['offerflag']=='1'){
+  					if(good_value>0.2){ // good trade for an offer
+  						temp_color = 'green';
+            } else if (good_value<-0.2) {
+              temp_color = 'red';
+            } else {
+              temp_color='#212529';
+            }
+  						
+  					expiringsoon += '<div class="gabBTContractItem" onclick="window.open(\'{{url_for('main.colonies', charter=charter)}}\', \'_blank\')"><span id="tml'+(tml.length-1+100*tml_offset)+'" class="contractQuantity">Expires in</span><span class="contractHeader">YOU GET</span><img class="gabBTContractItemImage" src="https://www.apewebapps.com/apps/my-colony/'+gameversion+'/images/ind-coin.png"><span class="contractQuantity">'+Number(GlobalData[res][j]['price']).toLocaleString()+'</span><span class="priceHeader">YOU PAY</span><img class="gabBTContractItemImage" src="https://www.apewebapps.com/apps/my-colony/'+gameversion+'/images/'+catalog[res]+'"><span class="contractPrice">'+Number(GlobalData[res][j]['quantity']).toLocaleString()+'</span><span class="hundredPrice" style="color:'+temp_color+'">'+(GlobalData[res][j]['price']*100/GlobalData[res][j]['quantity']).toLocaleString()+' per 100</span><span class="offeredBy">Offered By</span><span class="offeredByName">'+GlobalData[res][j]['seller']+'</span></div>';
+  				} else {
+  					if (good_value<-0.2) { // good trade for a sell
+  						temp_color = 'green';
+            } else if (good_value>0.2) {
+              temp_color = 'red';
+            } else {
+              temp_color='#212529';
+            }
+  					
+  					expiringsoon += '<div class="gabBTContractItem" onclick="window.open(\'{{url_for('main.colonies', charter=charter)}}\', \'_blank\')"><span id="tml'+(tml.length-1+100*tml_offset)+'" class="contractQuantity">Expires in</span><span class="contractHeader">YOU GET</span><img class="gabBTContractItemImage" src="https://www.apewebapps.com/apps/my-colony/'+gameversion+'/images/'+catalog[res]+'"><span class="contractQuantity">'+Number(GlobalData[res][j]['quantity']).toLocaleString()+'</span><span class="priceHeader">YOU PAY</span><img class="gabBTContractItemImage" src="https://www.apewebapps.com/apps/my-colony/'+gameversion+'/images/ind-coin.png"><span class="contractPrice">'+Number(GlobalData[res][j]['price']).toLocaleString()+'</span><span class="hundredPrice" style="color:'+temp_color+'">'+(GlobalData[res][j]['price']*100/GlobalData[res][j]['quantity']).toLocaleString()+' per 100</span><span class="offeredBy">Offered By</span><span class="offeredByName">'+GlobalData[res][j]['seller']+'</span></div>';
+  				}
+  			}
+  		}
+  	}
+    if (expiringsoon=='') {
+      expiringsoon = '{{name}} has no ongoing contract.';
+    } else {
+      expiringsoon = '<p>{{name}} has '+tml.length+' ongoing contracts.</p>'+expiringsoon;
+    }
+  	document.getElementById('gbtdiv').innerHTML = expiringsoon;
+  	for (var j=0; tml.length > j; j++) {
+  		initializeClock('tml'+(j+100*tml_offset), tml[j]);
+  	}
+}
+
+//https://www.sitepoint.com/build-javascript-countdown-timer-no-dependencies/
+function getTimeRemaining(endtime){
+  var t = Date.parse(endtime) - Date.parse(new Date());
+  var seconds = Math.floor( (t/1000) % 60 );
+  var minutes = Math.floor( (t/1000/60) % 60 );
+  var hours = Math.floor( (t/(1000*60*60))  );
+  return {
+    'total': t,
+    'hours': hours,
+    'minutes': minutes,
+    'seconds': seconds
+  };
+}
+function initializeClock(id, endtime){
+  var clock = document.getElementById(id);
+    var t = getTimeRemaining(endtime);
+	if (t.hours<=9) {t.hours='0'+t.hours}
+	if (t.minutes<=9) {t.minutes='0'+t.minutes}
+	if (t.seconds<=9) {t.seconds='0'+t.seconds}
+  clock.innerHTML = (t.hours) + ':' + t.minutes +':' + t.seconds;
+  var timeinterval = setInterval(function(){
+    var t = getTimeRemaining(endtime);
+  if (t.total<0) {clock.innerHTML = 'Expired!'}
+	if (t.hours<=9) {t.hours='0'+t.hours}
+	if (t.minutes<=9) {t.minutes='0'+t.minutes}
+	if (t.seconds<=9) {t.seconds='0'+t.seconds}
+    clock.innerHTML = (t.hours) + ':' + t.minutes +':' + t.seconds;
+  },1000);
+}
+</script>
+{% endblock %}

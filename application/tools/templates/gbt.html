@@ -1,0 +1,333 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Intergalactic Market - Coloniae{% endblock %}
+
+{% block corps %}
+<div class="ui container fluid">
+  <h1 class="ui center aligned header">Online Market</h1>
+
+  <div class="ui text container"  style="margin-bottom:3%">
+    <p>Here is the My Colony Online Market in real-time.</p>
+    <ul class="ui list">
+      <li><code>Average price</code> is the average price <b>of 100 goods</b> in the current contracts (it includes offer-to-buy contracts).</li>
+      <li><code>Total offering</code> is the total amount available to buy (ie. contracts for which you get resources against money).</li>
+      <li><code>Total asking</code> is the total amount available to sell (ie. contracts for which you get money against resources).</li>
+    </ul>
+  </div>
+
+  <div class="ui container fluid">
+    <h4>Live activity</h4>
+    <table class="ui very compact unstackable table" style="margin-bottom:3%">
+      <thead>
+        <tr>
+          <th>Event</th><th>Gives</th><th>Asks</th><th>Seller</th><th>Buyer</th>
+        </tr>
+      </thead>
+      <tbody id="activity_body">
+      </tbody>
+    </table>
+  </div>
+
+  <div class="ui container">
+    <h4>Market contracts <i style="margin-left: 5px">to update, refresh the page.</i></h4>
+    <div class="ui fluid container four column grid" id="menu">
+      <div class="ui active centered inline text loader">Loading data from server...</div>
+    </div>
+  </div>
+
+  <div class="ui container fluid" id="selection" style="margin-top: 10px">
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- styling the gbt like in game -->
+<link rel="stylesheet" href="/static/css/gbt.css">
+<script>
+var GlobalData;	
+var GlobalAvgs;
+var tiles_src = {}; // {'Water':'ind-water.png'}
+var res_id_to_name = {};
+
+function percentagemore(a, b){return (b-a)/a;}
+
+function parseContracts(res){
+	if (!GlobalData[res]) {return}
+	document.getElementById('selection').innerHTML = '';
+	
+	var selectionHtml = '<div class="gabBTContractItem" onclick="javascript:backToMenu();"><span class="contractHeader">BACK TO MENU</span><img class="gabBTContractItemImage" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-back.png"></div>';
+	for (var j=0; GlobalData[res].length > j; j++) {
+		var good_value = percentagemore(GlobalAvgs[res]*100, (GlobalData[res][j]['price']*100/GlobalData[res][j]['quantity']));
+    var temp_url = window.location.protocol+'//'+window.location.hostname+'{{url_for('main.colonies', charter='')}}'+GlobalData[res][j]['sellercharter'];
+		if(GlobalData[res][j]['offerflag']=='1'){
+			if(good_value>0.2){ // good trade for an offer
+				temp_color = 'green';}
+			else if(good_value<-0.2){temp_color = 'red';}else{temp_color='#212529';}
+			selectionHtml += '<div class="gabBTContractItem" onclick="window.open(\''+temp_url+'\', \'_blank\')"><span id="tml'+j+'" class="contractQuantity">Expires in</span><span class="contractHeader">YOU GET</span><img class="gabBTContractItemImage" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png"><span class="contractQuantity">'+Number(GlobalData[res][j]['price']).toLocaleString()+'</span><span class="priceHeader">YOU PAY</span><img class="gabBTContractItemImage" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/'+tiles_src[res]+'"><span class="contractPrice">'+Number(GlobalData[res][j]['quantity']).toLocaleString()+'</span><span class="hundredPrice" style="color:'+temp_color+'">'+(GlobalData[res][j]['price']*100/GlobalData[res][j]['quantity']).toLocaleString()+' per 100</span><span class="offeredBy">Offered By</span><span class="offeredByName">'+GlobalData[res][j]['seller']+'</span></div>';
+		} else {
+			if(good_value<-0.2){ // good trade for a sell
+				temp_color = 'green';}
+			else if(good_value>0.2){temp_color = 'red';}else{temp_color='#212529';}
+			
+			selectionHtml += '<div class="gabBTContractItem" onclick="window.open(\''+temp_url+'\', \'_blank\')"><span id="tml'+j+'" class="contractQuantity">Expires in</span><span class="contractHeader">YOU GET</span><img class="gabBTContractItemImage" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/'+tiles_src[res]+'"><span class="contractQuantity">'+Number(GlobalData[res][j]['quantity']).toLocaleString()+'</span><span class="priceHeader">YOU PAY</span><img class="gabBTContractItemImage" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png"><span class="contractPrice">'+Number(GlobalData[res][j]['price']).toLocaleString()+'</span><span class="hundredPrice" style="color:'+temp_color+'">'+(GlobalData[res][j]['price']*100/GlobalData[res][j]['quantity']).toLocaleString()+' per 100</span><span class="offeredBy">Offered By</span><span class="offeredByName">'+GlobalData[res][j]['seller']+'</span></div>';
+		}
+	}
+	document.getElementById('selection').innerHTML = selectionHtml;
+	document.getElementById('selection').style.display = '';
+	document.getElementById('menu').style.display = 'none'; 
+	for (var j=0; GlobalData[res].length > j; j++) {
+		initializeClock('tml'+j, GlobalData[res][j]['expires']+'Z');
+	}
+}
+
+function parseAvgPrices(data, date, settonow) {
+    //document.getElementById('snapdate').innerHTML = date.toLocaleString();
+    var resdict = {}
+    for (var i=0; data.length > i; i++) {
+      if (!resdict.hasOwnProperty(data[i].resource)){resdict[data[i].resource] = []}
+      resdict[data[i].resource].push(data[i]);
+    }
+    //console.log(resdict);
+    var resavgs = {}  // PER 1 NOT PER 100
+    var resoffering = {}
+    var resasking = {}
+    for (i in resdict) {
+      
+      if (!resavgs.hasOwnProperty(i)){resavgs[i] = 0}
+      if (!resoffering.hasOwnProperty(i)){resoffering[i] = 0}
+      if (!resasking.hasOwnProperty(i)){resasking[i] = 0}
+      
+      for (var j=0; resdict[i].length > j; j++) {
+        resavgs[i] += Number(resdict[i][j]['price'])/Number(resdict[i][j]['quantity']);
+        if (resdict[i][j]['offerflag']=='1') {
+            resasking[i] += Number(resdict[i][j]['quantity']);
+        } else {
+            resoffering[i] += Number(resdict[i][j]['quantity']);
+        }
+      }
+      resavgs[i] = resavgs[i]/resdict[i].length;
+    }
+    //console.log(resavgs);
+    for (i in resdict) {
+        try {
+        document.getElementById('p-'+i).innerHTML = 'Average price: '+Math.round(Number(resavgs[i])*100).toLocaleString()+'<br>Total Offering: '+Math.round(Number(resoffering[i])).toLocaleString()+'<br>Total Asking: '+Math.round(Number(resasking[i])).toLocaleString();
+        } catch(e) {}
+    }
+	GlobalAvgs = resavgs;
+	GlobalData = resdict;
+}
+
+//https://www.sitepoint.com/build-javascript-countdown-timer-no-dependencies/
+function getTimeRemaining(endtime){
+  var t = Date.parse(endtime) - Date.parse(new Date());
+  var seconds = Math.floor( (t/1000) % 60 );
+  var minutes = Math.floor( (t/1000/60) % 60 );
+  var hours = Math.floor( (t/(1000*60*60))  );
+  return {
+    'total': t,
+    'hours': hours,
+    'minutes': minutes,
+    'seconds': seconds
+  };
+}
+function initializeClock(id, endtime){
+  var clock = document.getElementById(id);
+  //console.log(clock);
+    var t = getTimeRemaining(endtime);
+	if (t.hours<=9) {t.hours='0'+t.hours}
+	if (t.minutes<=9) {t.minutes='0'+t.minutes}
+	if (t.seconds<=9) {t.seconds='0'+t.seconds}
+  clock.innerHTML = (t.hours) + ':' + t.minutes +':' + t.seconds;
+  var timeinterval = setInterval(function(){
+    var t = getTimeRemaining(endtime);
+	if (t.hours<=9) {t.hours='0'+t.hours}
+	if (t.minutes<=9) {t.minutes='0'+t.minutes}
+	if (t.seconds<=9) {t.seconds='0'+t.seconds}
+    clock.innerHTML = (t.hours) + ':' + t.minutes +':' + t.seconds;
+    if(t.total<=0 || document.getElementById('selection').style == 'none'){
+	  clock.innerHTML = 'Expired!';
+      clearInterval(timeinterval);
+    }
+  },1000);
+}
+
+
+function backToMenu(){
+	document.getElementById('selection').style.display = 'none'; 
+	document.getElementById('menu').style.display = '';
+}
+
+
+
+$( document ).ready(function() {
+    $.getJSON('/static/json/gameversions/{{mycolony_version}}.json', function (versiondata) {
+        $.ajax({
+              type: 'GET',
+              url: 'https://mc1.my-colony.com/api.php?pf=4&g=1',
+              dataType: 'json',
+              success: function (data) {
+                  var gbt_resources = [];
+                  for (var i=0; i<data.length; i++){
+                    var temp_res = data[i];
+                    gbt_resources.push(temp_res.resource);
+                  }
+                  // parse items
+
+                  var inhtml = '';
+                  var allresources = versiondata.resources;
+                  var reslist_for_order = []; // only to be able to have alphabetical order
+
+                  for (var i=0; i<allresources.length; i++) {
+                    var temp_res = allresources[i];
+                    //if (!gbt_resources.includes(temp_res.name)) {continue;}
+                    if (!temp_res.canGift || temp_res.name=='Money') {continue;}
+                    tiles_src[temp_res.name] = allresources[i].icon;
+                    reslist_for_order.push(temp_res.name)
+                  }
+                  reslist_for_order.sort();
+                  for (var i=0; i<reslist_for_order.length; i++) {
+                    var temp_res = reslist_for_order[i];
+                    inhtml += `
+          <div class="livePriceCard" onclick="javascript:parseContracts('`+temp_res+`')">                                                     
+            <img src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/`+tiles_src[temp_res]+`" class="livePriceImage" alt="Loading ...">       
+            <span class="livePriceName">`+temp_res+`</span>               
+            <span id="p-`+temp_res+`" class="livePricePrice" style="color:initial;">No contract</span>                                            
+          </div>`;
+                  }
+
+                  document.getElementById('menu').innerHTML = inhtml;
+                  //console.log(data);
+                  parseAvgPrices(data, (new Date()), true);
+              }
+        });
+    });
+    // needed to get the resource name based on ID
+    $.ajax({
+        type: 'GET',
+        url: 'https://mc1.my-colony.com/api.php?pf=1&g=1',
+        dataType: 'json',
+        success: function (data) {
+          for (var i = data.resources.length - 1; i >= 0; i--) {
+            var tmp_res = data.resources[i];
+            res_id_to_name[tmp_res.id] = tmp_res.name;
+          }
+          console.log(res_id_to_name);
+          // connect to the trades channel to get real-time trades notification
+          $.ajax({ 
+          url: 'https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js', 
+          cache: true,
+          dataType: 'script', 
+          success: function () {
+              const gbtsocket = io("https://mc1.my-colony.com:2728");
+              gbtsocket.on("connect", function(data) {
+                gbtsocket.emit("joinroom", "trades");
+              });
+              gbtsocket.on("message", function(data) {
+                  prepend_market_activity(data);
+              });
+            }
+          });
+        }
+    });
+});
+
+function prepend_market_activity(data) {
+    var thtml = '';
+    var res = res_id_to_name[data.resource];
+    if (data.action=='posted') {
+      $.ajax({
+          type: 'GET',
+          url: "{{url_for('api.charter_from_colonyid')}}?cid="+data.trader,
+          dataType: 'json',
+          success: function (colinfo) {
+              if (!colinfo.result) {
+                if (data.contract=='0') {
+                  var thtml = `
+                  <tr style="display:none;">
+                    <td class="gbt-trade-posted">Posted trade</td>
+                    <td><img class="gbt-trade-image" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/`+tiles_src[res]+`"> `+data.amount+`</td>
+                    <td><img class="gbt-trade-image" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png"> `+data.price+`</td>
+                    <td>unknown</td>
+                    <td></td>
+                  </tr>`;
+                } else {
+                  var thtml = `
+                  <tr style="display:none;">
+                    <td class="gbt-trade-posted">Posted offer</td>
+                    <td><img class="gbt-trade-image" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png"> `+data.price+`</td>
+                    <td><img class="gbt-trade-image" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/`+tiles_src[res]+`"> `+data.amount+`</td>
+                    <td>unknown</td>
+                    <td></td>
+                  </tr>`;
+                }
+              } else {
+                if (data.contract=='0') {
+                  var thtml = `
+                  <tr style="display:none;">
+                    <td class="gbt-trade-posted">Posted trade</td>
+                    <td><img class="gbt-trade-image" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/`+tiles_src[res]+`"> `+data.amount+`</td>
+                    <td><img class="gbt-trade-image" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png"> `+data.price+`</td>
+                    <td><a href="{{url_for('main.colonies', charter='')}}`+colinfo.charter+`">`+colinfo.name+`</a>, <a href="{{url_for('main.player', username='')}}`+colinfo.ape_account+`">`+colinfo.ape_account+`</a></td>
+                    <td></td>
+                  </tr>`;
+                } else {
+                  var thtml = `
+                  <tr style="display:none;">
+                    <td class="gbt-trade-posted">Posted offer</td>
+                    <td><img class="gbt-trade-image" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png"> `+data.price+`</td>
+                    <td><img class="gbt-trade-image" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/`+tiles_src[res]+`"> `+data.amount+`</td>
+                    <td><a href="{{url_for('main.colonies', charter='')}}`+colinfo.charter+`">`+colinfo.name+`</a>, <a href="{{url_for('main.player', username='')}}`+colinfo.ape_account+`">`+colinfo.ape_account+`</a></td>
+                    <td></td>
+                  </tr>`;
+                }
+              }
+              add_row_with_max("#activity_body", thtml, 5);
+          }
+      });
+    } else if (data.action=='purchased') {
+        var ownerlink = {seller:'', buyer:''};
+        var namelink = {seller:'', buyer:''};
+        $.each(['seller', 'buyer'], function(index, item) {
+            if (!char_to_owner[data[item]]) {
+              ownerlink[item] = 'unknown';
+            } else {
+              ownerlink[item] = '<a href="'+Flask.url_for('main.player', {'username':char_to_owner[data[item]]})+'", target="_blank">'+char_to_owner[data[item]]+'</a>';
+            }
+            if (!char_to_name[data[item]]) {
+              namelink[item] = '<a href="'+Flask.url_for('main.colonies', {'charter':data[item]})+'", target="_blank">unknown</a>';
+            } else {
+              namelink[item] = '<a href="'+Flask.url_for('main.colonies', {'charter':data[item]})+'", target="_blank">'+char_to_name[data[item]]+'</a>';
+            }
+        });
+        if (data.contract=='0') {
+          var thtml = `
+          <tr style="display:none;">
+            <td class="gbt-trade-purchased">Purchased trade</td>
+            <td><img class="gbt-trade-image" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/`+tiles_src[res]+`"> `+data.amount+`</td>
+            <td><img class="gbt-trade-image" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png"> `+data.price+`</td>
+            <td>`+namelink.seller+`, `+ownerlink.seller+`</td>
+            <td>`+namelink.buyer+`, `+ownerlink.buyer+`</td>
+          </tr>`;
+        } else {
+          var thtml = `
+          <tr style="display:none;">
+            <td class="gbt-trade-purchased">Purchased offer</td>
+            <td><img class="gbt-trade-image" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png"> `+data.price+`</td>
+            <td><img class="gbt-trade-image" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/`+tiles_src[res]+`"> `+data.amount+`</td>
+            <td>`+namelink.seller+`, `+ownerlink.seller+`</td>
+            <td>`+namelink.buyer+`, `+ownerlink.buyer+`</td>
+          </tr>`;
+        }
+        add_row_with_max("#activity_body", thtml, 5);
+    }
+}
+
+function add_row_with_max(element_selector, contents_to_add, max_rows) {
+  $(contents_to_add).hide().prependTo(element_selector).fadeIn(500);
+  if ($(element_selector+' >tr').length > max_rows) {
+      $(element_selector+' >tr').last().remove();
+  }
+}
+</script>
+{% endblock %}

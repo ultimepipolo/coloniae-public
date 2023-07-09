@@ -1,0 +1,312 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Top 10 Charts - Coloniae{% endblock %}
+
+{% block corps %}
+<!-- Articles -->
+<div class="ui container fluid">
+    <h1 class="ui center aligned header">Top 10 Charts</h1>
+
+    <div id="main_tab" class="ui top attached tabular menu">
+        <a class="item active" data-tab="popdiv">Population Chart</a>
+        <a class="item" data-tab="gdpdiv">GDP Chart</a>
+    </div>
+    <div class="ui bottom attached active tab segment" data-tab="popdiv">
+        <div id="pop_container" style="height:700px">
+            <div class="ui active inverted dimmer">
+                <div class="ui text loader">Loading chart</div>
+            </div>
+        </div>
+        <button id="button1" class="ui button">Toggle all</button>
+        <button id="button2" class="ui button">Show current top 10</button>
+    </div>
+    <div class="ui bottom attached tab segment" data-tab="gdpdiv">
+        <div id="gdp_container" style="height:700px"></div>
+        <button id="button3" class="ui button">Toggle all</button>
+        <button id="button4" class="ui button">Show current top 10</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<script type="text/javascript" src="/static/js/daily/toppop.js"></script>
+<script type="text/javascript" src="/static/js/daily/topgdp.js"></script>
+<script type="text/javascript">
+$( document ).ready(function() {
+    var gdp_series = [];
+    for (names in seriesgdp) {
+        gdp_series.push({id:'series', name:names, data:seriesgdp[names]});
+    }
+    var pop_series = [];
+    for (names in seriespop) {
+        pop_series.push({id:'series', name:names, data:seriespop[names]});
+    }
+
+    // Create the charts
+    Highcharts.setOptions({
+    global: {
+        useUTC: true
+    }
+    });
+
+    Highcharts.chart('gdp_container', {
+        chart: {
+            zoomType: 'x'
+        },
+        
+        legend: {
+        align: 'right',
+        verticalAlign: 'middle',
+        layout: 'vertical',
+        labelFormatter: function() {
+            var words = this.name.split("");
+            var numWordsPerLine = 30;
+            var str = [];
+
+            for (var word in words) {
+                if (word > 0 && word % numWordsPerLine == 0)
+                    str.push('<br>');
+
+                 str.push(words[word]);
+            }
+
+            return str.join('');}
+            
+        },
+        rangeSelector: {
+            buttons: [{
+                type: 'day',
+                count: 1,
+                text: '1d'
+            },{
+                type: 'day',
+                count: 3,
+                text: '3d'
+            }, {
+                type: 'week',
+                count: 1,
+                text: '1w'
+            }, {
+                type: 'month',
+                count: 1,
+                text: '1m'
+            }, {
+                type: 'all',
+                text: 'All'
+            }],
+            selected: 2
+            
+        },
+            xAxis: {
+        type: 'datetime',
+        dateTimeLabelFormats: {
+            second: '%d %B %Y<br/>%H:%M:%S',
+            minute: '%d %B %Y<br/>%H:%M',
+            hour: '%d %B %Y<br/>%H:%M',
+            day: '%d %B %Y',
+            week: '%d %B %Y',
+            month: '%B %Y',
+            year: '%Y'
+            }
+            
+        },
+        yAxis: {
+            type: 'logarithmic',
+            title: {
+            text: '{{stat}}'
+            },
+        },
+        
+        title: {
+            text: 'History of GDP'
+        },
+        
+        subtitle: {
+        text: 'Data fetched at midnight UTC eg. data of 2018-07-20 is until 2018-07-19 23h59.'
+        },
+        
+        responsive: {
+            rules: [{
+                condition: {
+                    maxWidth: 768
+                },
+                chartOptions: {
+                    legend: {
+                        align: 'center',
+                        verticalAlign: 'bottom',
+                        layout: 'horizontal'
+                    }
+                }
+            }]
+        },
+        
+        series: gdp_series
+        
+    });
+
+    document.getElementById('pop_container').innerHTML = '';
+    Highcharts.chart('pop_container', {
+        chart: {
+            zoomType: 'x'
+        },
+        
+        legend: {
+        align: 'right',
+        verticalAlign: 'middle',
+        layout: 'vertical',
+        labelFormatter: function() {
+            var words = this.name.split("");
+            var numWordsPerLine = 30;
+            var str = [];
+
+            for (var word in words) {
+                if (word > 0 && word % numWordsPerLine == 0)
+                    str.push('<br>');
+
+                 str.push(words[word]);
+            }
+
+            return str.join('');}
+            
+        },
+        rangeSelector: {
+            buttons: [{
+                type: 'day',
+                count: 1,
+                text: '1d'
+            },{
+                type: 'day',
+                count: 3,
+                text: '3d'
+            }, {
+                type: 'week',
+                count: 1,
+                text: '1w'
+            }, {
+                type: 'month',
+                count: 1,
+                text: '1m'
+            }, {
+                type: 'all',
+                text: 'All'
+            }],
+            selected: 2
+            
+        },
+            xAxis: {
+        type: 'datetime',
+        dateTimeLabelFormats: {
+            second: '%d %B %Y<br/>%H:%M:%S',
+            minute: '%d %B %Y<br/>%H:%M',
+            hour: '%d %B %Y<br/>%H:%M',
+            day: '%d %B %Y',
+            week: '%d %B %Y',
+            month: '%B %Y',
+            year: '%Y'
+            }
+            
+        },
+        yAxis: {
+            type: 'logarithmic',
+            title: {
+            text: '{{stat}}'
+            },
+        },
+        
+        title: {
+            text: 'History of Population'
+        },
+        
+        subtitle: {
+        text: 'Data fetched at midnight UTC eg. data of 2018-07-20 is until 2018-07-19 23h59.'
+        },
+        
+        responsive: {
+            rules: [{
+                condition: {
+                    maxWidth: 768
+                },
+                chartOptions: {
+                    legend: {
+                        align: 'center',
+                        verticalAlign: 'bottom',
+                        layout: 'horizontal'
+                    }
+                }
+            }]
+        },
+        
+        series: pop_series
+        
+    });
+
+    // the button1 action
+    $('#button1').click(function() {
+        var chart = $('#pop_container').highcharts();
+        var series = chart.series[0];
+        if (series.visible) {
+            $(chart.series).each(function(){
+                //this.hide();
+                this.setVisible(false, false);
+            });
+        } else {
+            $(chart.series).each(function(){
+                //this.show();
+                this.setVisible(true, false);
+            });
+        }
+        chart.redraw();
+    });
+
+    // the button2 action
+    $('#button2').click(function() {
+      var chart = $('#pop_container').highcharts();
+      for (var i=0;pop_series.length>i;i++) {
+        if (popArray.indexOf(chart.series[i].name) != -1) {
+          chart.series[i].setVisible(true, false);
+        } else {
+          chart.series[i].setVisible(false, false);
+        }
+      }
+      chart.redraw();
+    });
+
+    // the button3 action
+    $('#button3').click(function() {
+        var chart = $('#gdp_container').highcharts();
+        var series = chart.series[0];
+        if (series.visible) {
+            $(chart.series).each(function(){
+                //this.hide();
+                this.setVisible(false, false);
+            });
+        } else {
+            $(chart.series).each(function(){
+                //this.show();
+                this.setVisible(true, false);
+            });
+        }
+        chart.redraw();
+    });
+
+    // the button4 action
+    $('#button4').click(function() {
+      var chart = $('#gdp_container').highcharts();
+      for (var i=0;gdp_series.length>i;i++) {
+        if (gdpArray.indexOf(chart.series[i].name) != -1) {
+          chart.series[i].setVisible(true, false);
+        } else {
+          chart.series[i].setVisible(false, false);
+        }
+      }
+      chart.redraw();
+    });
+
+    $('#main_tab .item').tab();
+    document.getElementById("button2").click(); // Click on the button2
+    document.getElementById("button4").click(); // Click on the button4
+});
+</script>
+{% endblock %}

@@ -1,0 +1,316 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Database search - Coloniae{% endblock %}
+
+{% block corps %}
+<div class="ui container fluid">
+  <h1 class="ui center aligned header">Database search</h1>
+
+  <div class="ui text container" style="margin-top: 3%">
+    <p>Welcome to the database search. This tool helps you explore the entirety of the Coloniae database.</p>
+    <p>You may search for colonies matching certain criteria using the various filter fields. You may also search colonies by name and owner account. The search query does not have to be exact but it has to contain a continuous series of letters included in the name.</p>
+    <p>For each row (colony), data is returned <i>for the last entry matching all the criteria</i>. For example, if you search for your colony with population<1000000, it will return data with all the numbers (gdp, cw size, population, ...) from the day when it was last seen below 1000000 population. This applies to names as well, that is some name searches might fail due to name changing over time.</p>
+    <p>Data is included since July 2018. Some queries with a very large result set will abort for technical reasons.</p>
+    <p>You may download the colonies history since 10 July 2018 <a href="/static/csv/history/">here</a>.</p>
+  </div>
+
+  <div class="ui container" style="margin-top: 3%">
+  	<div id="form_search" class="ui form">
+  		<div class="three fields">
+			  <div class="field">
+			    <label>Colony name</label>
+			    <input type="text" name="colony_name" placeholder="Colony name">
+			  </div>
+			  <div class="field">
+			    <label>Colony owner account</label>
+			    <input type="text" name="colony_owner" placeholder="Colony owner account">
+			  </div>
+			  <div class="field">
+			    <label>Region</label>
+			    <div class="ui selection dropdown">
+					  <input type="hidden" name="region">
+					  <i class="dropdown icon"></i>
+					  <div class="default text">Region</div>
+					  <div class="menu">
+					    <div class="item" data-value="">Regradless</div>
+					    <div class="item" data-value="1">Yes</div>
+					    <div class="item" data-value="0">No</div>
+					  </div>
+					</div>
+			  </div>
+			</div>
+  		<div class="four fields">
+			  <div class="field">
+			    <label>Population min</label>
+			    <input type="number" name="population_min" placeholder="Population min">
+			  </div>
+			  <div class="field">
+			    <label>Population max</label>
+			    <input type="number" name="population_max" placeholder="Population max">
+			  </div>
+			  <div class="field">
+			    <label>GDP min</label>
+			    <input type="number" name="gdp_min" placeholder="GDP min">
+			  </div>
+			  <div class="field">
+			    <label>GDP max</label>
+			    <input type="number" name="gdp_max" placeholder="GDP max">
+			  </div>
+			</div>
+  		<div class="four fields">
+			  <div class="field">
+			    <label>Foundation date after</label>
+			    <input type="date" name="foundation_min" placeholder="Foundation date after">
+			  </div>
+			  <div class="field">
+			    <label>Foundation date before</label>
+			    <input type="date" name="foundation_max" placeholder="Foundation date after">
+			  </div>
+			  <div class="field">
+			    <label>Independence day after</label>
+			    <input type="date" name="independence_min" placeholder="Independence day after">
+			  </div>
+			  <div class="field">
+			    <label>Independence day before</label>
+			    <input type="date" name="independence_max" placeholder="Independence day before">
+			  </div>
+			</div>
+  		<div class="three fields">
+			  <div class="field">
+			    <label>Map types</label>
+			    <div class="ui multiple selection dropdown">
+					  <!-- This will receive comma separated values-->
+					  <input name="maptypes" type="hidden">
+					  <i class="dropdown icon"></i>
+					  <div class="default text">Map types</div>
+					  <div class="menu">
+				    	{% for maptype in maptypes %}
+						  <div class="item" data-value="{{maptype}}">{{maptype}}</div>
+						  {% endfor %}
+					  </div>
+					</div>
+			  </div>
+			  <div class="field">
+			    <label>Civilizations</label>
+			    <div class="ui multiple selection dropdown">
+					  <!-- This will receive comma separated values-->
+					  <input name="civilizations" type="hidden">
+					  <i class="dropdown icon"></i>
+					  <div class="default text">Civilizations</div>
+					  <div class="menu">
+			    	{% for civ in civilizations %}
+					  <div class="item" data-value="{{civ}}">{{civ}}</div>
+					  {% endfor %}
+					  </div>
+					</div>
+			  </div>
+			  <div class="field">
+			    <label>Races</label>
+			    <div class="ui multiple selection dropdown">
+					  <!-- This will receive comma separated values-->
+					  <input name="races" type="hidden">
+					  <i class="dropdown icon"></i>
+					  <div class="default text">Races</div>
+					  <div class="menu">
+			    	{% for race in races %}
+					  <div class="item" data-value="{{race}}">{{race}}</div>
+					  {% endfor %}
+					  </div>
+					</div>
+			  </div>
+			</div>
+		  <button id="button_submit" class="ui button loading disabled" onclick="javascript:do_search(this)" type="submit" disabled>Submit</button>
+		</div>
+	</div>
+
+  <div class="ui container" style="margin-top:3%">
+  	<style id="styles_datatables"></style>
+  	<table class="ui striped table" id="main_search_table">
+  		<thead>
+  			<tr>
+  				<th>Charter</th>
+  				<th>Name</th>
+  				<th>Owner</th>
+  				<th>Population</th>
+  				<th>GDP</th>
+  				<th>CW size</th>
+  				<th>Region</th>
+  				<th>Race</th>
+  				<th>Civilization</th>
+  				<th>Map type</th>
+  				<th>Independence</th>
+  				<th>Foundation</th>
+  			</tr>
+  		</thead>
+  		<tbody>
+  			
+  		</tbody>
+  	</table>
+  	<div id="main_search_buttons"></div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="text/javascript">
+function do_search(buttonelem) {
+	//show loading
+	buttonelem.classList.add('loading');
+	buttonelem.classList.add('disabled');
+	buttonelem.disabled = true;
+  //gather search params ASSUMES form is parent of button
+  var search_params = {};
+  var input_elements = buttonelem.parentElement.getElementsByTagName('input');
+  for (var i = input_elements.length - 1; i >= 0; i--) {
+  	var t_elem = input_elements[i];
+		search_params[t_elem.name] = t_elem.value;
+  }
+  //call api...
+  $.ajax({
+  type: 'GET',
+  url: '{{url_for('api.adv_search')}}',
+  dataType: 'json',
+  data: search_params,
+  success: function (data) {
+		if (data.error) {
+			alert(data.error);
+		} else {
+			//give the new data to the table
+			var table = $("#main_search_table").DataTable();
+			table.clear();
+	    table.rows.add(data);
+	    table.draw();
+		}
+		//hide loading
+		buttonelem.classList.remove('loading');
+		buttonelem.classList.remove('disabled');
+		buttonelem.disabled = false;
+  	}
+  });
+}
+
+function load_scripts(urllist, callback) {
+	if (urllist.length == 0) {
+		callback();
+		return;
+	}
+	var url_to_load = urllist.shift();
+	$.ajax({
+    type: 'GET',
+    url: url_to_load,
+    dataType: 'script',
+    cache:true,
+    success: function () {
+    	load_scripts(urllist, callback);
+    }
+  });
+}
+
+$(document).ready( function() {
+	$('#form_search .ui.dropdown').dropdown();
+	var urllist = [
+		'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js',
+		'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js',
+		'https://cdn.datatables.net/v/se/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-html5-1.6.2/datatables.min.js'
+	]
+	load_scripts(urllist, function() {
+    $.ajax({
+    type: 'GET',
+    url: 'https://cdn.datatables.net/v/se/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-html5-1.6.2/datatables.min.css',
+    cache:true,
+    success: function (dt_css_styles) {
+    	document.getElementById('styles_datatables').innerHTML = dt_css_styles;
+    	var table = $("#main_search_table").DataTable({
+    		dom: `<'ui stackable grid'
+						    <'row'
+					        <'five wide column'l>
+					        <'#main_search_buttons.center aligned six wide column'>
+					        <'right aligned five wide column'f>
+						    >
+								<'row dt-table'
+									<'sixteen wide column'tr>
+						    >
+						    <'row'
+					        <'seven wide column'i>
+					        <'right aligned nine wide column'p>
+						    >
+							>`,
+        buttons: [
+          {
+            extend: 'copyHtml5',
+            exportOptions: { orthogonal: 'export' }
+          },
+          {
+            extend: 'excelHtml5',
+            exportOptions: { orthogonal: 'export' }
+          },
+          {
+            extend: 'pdfHtml5',
+            exportOptions: { orthogonal: 'export' }
+          },
+          {
+            extend: 'csvHtml5',
+            exportOptions: { orthogonal: 'export' }
+          }
+        ],
+    		scrollX: true,
+  			order: [[3, "desc"]],
+    		columnDefs: [
+		      {
+		        targets: [1], // charters
+		        render: function (data, type, row, meta) {
+		          if (type == "display") {
+		            return '<a target="_blank" href="'+Flask.url_for('main.colonies', {'charter':row[0]})+'"">' +data +'</a>';
+		          }
+		          return data;
+		        }
+		      },
+		      {
+		        targets: [2], // owners
+		        render: function (data, type, row, meta) {
+		          if (type == "display") {
+		            return '<a target="_blank" href="'+Flask.url_for('main.player', {'username':data})+'"">' +data +'</a>';
+		          }
+		          return data;
+		        }
+		      },
+		      {
+		        targets: [3, 4], // pop and gdp
+		        render: function (data, type, row, meta) {
+		          if (type == "display") {
+		            return Number(data).toLocaleString();
+		          }
+		          return data;
+		        }
+		      },
+		      {
+		        targets: [10,11], // time
+		        render: function (data, type, row, meta) {
+		          if (type == "display") {
+		          	if (!data) {
+		          		return null;
+		          	}
+		            return new Date(Number(data) * 1000).toLocaleDateString();
+		          }
+		          if (type == "export") {
+		          	if (!data) {
+		          		return null;
+		          	}
+		          	var t_d = data*1000 - ((new Date(data*1000)).getTimezoneOffset())*60*1000;
+		            return (new Date(t_d)).toISOString().slice(0,10);
+		          }
+		          return data;
+		        }
+		      }
+		    ]
+	  	});
+	  	table.buttons().container().appendTo( $('#main_search_buttons', table.table().container()) );
+    	document.getElementById('button_submit').classList.remove('loading');
+    	document.getElementById('button_submit').classList.remove('disabled');
+    	document.getElementById('button_submit').disabled = false;
+    }});
+	});
+});
+</script>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Tables - Coloniae{% endblock %}
+
+{% block corps %}
+<!-- Articles -->
+<div class="ui container fluid">
+
+  <h1 class="ui center aligned header">Leaderboard</h1>
+
+  <div class="ui text container">
+    <p>This is the My Colony Leaderboard. All online colonies are shown. The leaderboard is updated daily.</p>
+    <p>The Commonwealth size is determined by the number of active colonies whose owner is not the Commonwealth leader.</p>
+    <p><b>If you are looking for a Commonwealth</b> don't base your choice on these rankings as some may have set their charter private. Better visit the <a target="_blank" href="https://www.ape-apps.com/viewpage.php?p=22">Commonwealths advertising on the forum</a>.</p>
+
+    <p>Also check out <a class="ui compact button" href="{{url_for('lbs.daily_lbs')}}">today's top colonies</a> and <a class="ui compact button" href="{{url_for('lbs.topcharts')}}">all time top 10 charts</a>.</p>
+
+    <p>There are <b><span id="activecoloniesnb"></span> active</b> colonies, and <b><span id="totalcoloniesnb"></span> colonies in total</b>.</p>
+
+    <div class="ui checkbox" id="activecheckbox">
+        <input type="checkbox">
+        <label>Only show active colonies (colonies that were played at least 3 days during the last 7 days).</label>
+    </div>
+  </div>
+
+  <div id="main_container" class="ui container fluid" style="margin-top: 3%">
+    <div class="ui segment" style="height: 100px">
+      <div class="ui active inverted dimmer">
+        <div class="ui text loader">Loading table</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/se/dt-1.10.20/datatables.min.css"/>
+<script type="text/javascript" src="https://cdn.datatables.net/v/se/dt-1.10.20/datatables.min.js"></script>
+
+<script type="text/javascript">
+var badges_catalog = {{ badges_catalog | tojson }};
+function formatThisName(temp_elem) {
+  var temp_ape_account = temp_elem.trim();
+  if (badges_catalog.hasOwnProperty(temp_ape_account)) {
+    for (var j=0; badges_catalog[temp_ape_account].length > j ; j++) {
+      temp_elem += ' <span  style="font-size:.7rem" class="ui '+badges_catalog[temp_ape_account][j].color+' label">'+badges_catalog[temp_ape_account][j].badgename+'</span>';
+    }
+  }
+  return temp_elem;
+}
+
+var active_charters = [];
+$( document ).ready(function() {
+    $.getJSON('/static/json/daily/rawtable.json', function(result){
+    document.getElementById('totalcoloniesnb').innerHTML = result.length.toLocaleString();
+    // build table
+    document.getElementById('main_container').innerHTML = '<table class="ui celled compact table" id="main_table" style="width:100%"></table>';
+    $('#main_table').DataTable( {
+        data: result,
+        columns: [
+        {title:'Charter'},
+        {title:'Name'},
+        {title:'Owner'},
+        {title:'Population'},
+        {title:'GDP'},
+        {title:'CW size'},
+        {title:'Unemployment'},
+        {title:'Region'},
+        {title:'Map Type'},
+        {title:'Civilization'},
+        {title:'Race'},
+        {title:'Foundation date'}
+        ],
+        columnDefs: [ {
+            targets: 1,
+            render: function ( data, type, row ) {
+                return '<a href="{{url_for('main.colonies', charter='')}}'+row[0]+'" target="_blank">'+data+'</a>';
+            }
+        },{
+            targets: 2,
+            render: function ( data, type, row ) {
+                return '<a href="{{url_for('main.player', username='')}}'+data+'" target="_blank">'+formatThisName(data)+'</a>';
+            }
+        },{
+            targets: 3,
+            render: function ( data, type, row ) {
+                if (type=='display') {
+                  return data.toLocaleString();
+                }
+                return data;
+            }
+        },{
+            targets: 4,
+            render: function ( data, type, row ) {
+                if (type=='display') {
+                  return data.toLocaleString();
+                }
+                return data;
+            }
+        } ],
+        scrollX: true,
+        order: [[ 3, 'desc' ]]
+    } );
+    $.getJSON('/static/json/daily/active_charters.json', function(activechartersresult){
+        active_charters = activechartersresult;
+        document.getElementById('activecoloniesnb').innerHTML = active_charters.length;
+        $.fn.dataTable.ext.search.push(
+            function( settings, data, dataIndex ) {
+                if ($('#activecheckbox').checkbox('is checked')) {
+                    return active_charters.includes(data[0]) ? true : false;
+                } else {
+                    return true;
+                }
+            }
+        );
+        $('#activecheckbox').checkbox({
+            onChecked: function() {
+              $('#main_table').DataTable().draw();
+            },
+            onUnchecked: function() {
+              $('#main_table').DataTable().draw();
+            },
+        });
+        $('#activecheckbox').checkbox('set checked');
+        $('#main_table').DataTable().draw();
+     });
+  });
+});
+</script>
+{% endblock %}

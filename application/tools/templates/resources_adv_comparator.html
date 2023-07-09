@@ -1,0 +1,282 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Resource comparator - Coloniae{% endblock %}
+
+{% block corps %}
+<div class="ui container fluid">
+  <h1 class="ui center aligned header">Resource Comparator</h1>
+
+  <div class="ui text container">
+    <p>Welcome to the resources comparator. This tool helps you compare resource values.<br>For easier comparison, you can use the <b>Autofill buyer amounts</b> checkbox. When checked, the tool will take the total value of the seller resources and will equitably allocate it in the resource amounts of the buyer that are not blocked.<br>To <b>block a resource</b>, that is to prevent it from being changed by Autofill, check the checkbox next to it.</p>
+    <p>Average prices on the online market during the last 3 days are used.</p>
+    <p>The url updates dynamically so that you can easily share or save this trade. <button class="ui compact button" onclick="javascript:copyUrl()">Copy to clipboard</a></p>
+  </div>
+  
+  <div class="ui stackable grid" style="margin-top:10px">
+    <div class="eight wide column">
+      <div>Seller :</div> 
+      <div id='all_inputs'></div>
+      <div>
+        <button class="ui button" style="margin-top:10px" onclick="javascript:addInput();">Add a resource</button>
+      </div>
+      <div>
+        <table style='font-size:14px;margin-top:10px' class='ui compact striped table' id='input_detail'>
+        </table>
+      </div>
+      <div id='resultInput'>
+      </div>
+    </div>
+    <div class="eight wide column">
+      <div>Buyer :</div> 
+      <div id='all_outputs'></div> 
+      <div>
+        <button class="ui button" style="margin-top:10px" onclick="javascript:addOutput();">Add a resource</button>
+      </div>
+      <div>
+        <table style='font-size:14px;margin-top:10px' class='ui compact striped table' id='output_detail'>
+        </table>
+      </div>
+      <div id='resultOutput'>
+      </div>
+    </div>
+  </div>
+ 
+    
+      
+	<p id='resultTotal'></p>
+ 
+  <div class="ui checkbox">
+    <input type="checkbox" id="autofillbox">
+    <label for="autofillbox">Autofill buyer amounts</label>
+  </div>
+
+  <input id="hiddenlink" style="display: none;"></input>
+  
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="text/javascript">
+var Values = {0:100};
+var ValuesName = {'Money':100};
+var parentInputDiv = document.getElementById('all_inputs');
+var parentOutputDiv = document.getElementById('all_outputs');
+var input_det = {};
+var output_det = {};
+var catalog = {0:'Money'};
+var optionshtml = '<option value=0>Money</option>';
+
+
+$(document).ready(function(){
+  $.ajax({
+    type: 'GET',
+    url: 'https://mc1.my-colony.com/api.php?pf=1&g=1',
+    dataType: 'json',
+    success: function (data) {
+      data = data.resources;
+      var inverted_catalog = {};
+      for (i in data) {
+        catalog[data[i].id] = data[i].name;
+        inverted_catalog[data[i].name] = data[i].id;
+        Values[Number(data[i].id)] = Number(data[i].detailed.rolling);
+        ValuesName[data[i].name] = Number(data[i].detailed.rolling);
+      }
+      // create the options
+      var resources_list = Object.keys(inverted_catalog);
+      resources_list.sort();
+      for (var i=0; i<resources_list.length; i++) {
+        var temp_res = resources_list[i];
+        optionshtml += '<option value='+inverted_catalog[temp_res]+'>'+temp_res+'</option>';
+      }
+      inverted_catalog['Money'] = 0;
+      // check if there is a hash
+      if (window.location.hash != "") {
+        console.log('there is a hash : '+window.location.hash)
+        // decode and parse
+        try {
+          var actual = JSON.parse(atob(window.location.hash.substring(1)));
+          console.log(actual);
+          // add the inputs and their values
+          var inDet = actual.inDet;
+          var outDet = actual.outDet;
+          for (var outres in outDet) {
+            var t_output = addOutput();
+            t_output.children.output.value = inverted_catalog[outres];
+            t_output.children[1].children.amount.value = outDet[outres][0];
+            t_output.children[2].children.block.checked = outDet[outres][1];
+          }
+          for (var inres in inDet) {
+            var t_input = addInput();
+            t_input.children.input.value = inverted_catalog[inres];
+            t_input.children[1].children.amount.value = inDet[inres];
+          }
+          if (actual.autofill) {
+            document.getElementById('autofillbox').checked = true;
+          }
+          calc('out');
+        } catch (e){
+          console.log(e);
+          console.log('there was an error decoding the hash : '+window.location.hash);
+          // add the two first out/inputs
+          addOutput();
+          addInput();
+        }
+      } else {
+        console.log('there is no hash : '+window.location.hash);
+        // add the two first out/inputs
+        addOutput();
+        addInput();
+      }
+    }
+  });
+});
+
+
+
+function addInput(ret) {
+  var newinput = document.createElement('DIV');
+  newinput.className = 'input-group mt-1 mb-1';
+  newinput.innerHTML = "<select class='ui dropdown' id='input' onchange='javascript:calc(\"in\")'>"+optionshtml+"</select><div class='ui input' style='margin-left:5px'><input id='amount' type='number' min=0 onchange='javascript:calc(\"in\")'></div></div>";
+  parentInputDiv.appendChild(newinput);
+  return newinput;
+}
+
+
+function addOutput(ret) {
+  var newoutput = document.createElement('DIV');
+  newoutput.className = 'input-group mt-1 mb-1';
+  newoutput.innerHTML = "<select class='ui dropdown' id='output' onchange='javascript:calc(\"out\")'>"+optionshtml+"</select><div class='ui input' style='margin-left:5px'><input id='amount' type='number' min=0 onchange='javascript:calc(\"out\")'></div><div class='ui checkbox' style='margin-left:5px'><input type='checkbox' id='block'><label>Block</label></div></div>";
+  parentOutputDiv.appendChild(newoutput);
+  return newoutput;
+}
+
+
+
+function calcTotal(typee, only_blocked = false) {
+  if (typee == 'out') {
+    var outTotal = 0;
+    output_det = {};
+    for (i = 0; i < parentOutputDiv.getElementsByClassName('input-group mt-1 mb-1').length; ++i) {
+        e = parentOutputDiv.getElementsByClassName('input-group mt-1 mb-1')[i];
+        if (only_blocked && e.getElementsByClassName('ui checkbox')[0].children.block.checked) {
+          outTotal += Values[e.children.output.value]*e.getElementsByClassName('ui input')[0].children.amount.value/100;
+          if (output_det.hasOwnProperty(catalog[e.children.output.value])) {
+            output_det[catalog[e.children.output.value]] += Number(e.getElementsByClassName('ui input')[0].children.amount.value);
+          } else {
+            output_det[catalog[e.children.output.value]] = Number(e.getElementsByClassName('ui input')[0].children.amount.value);
+          }
+        } else if (!only_blocked) {
+          outTotal += Values[e.children.output.value]*e.getElementsByClassName('ui input')[0].children.amount.value/100;
+          if (output_det.hasOwnProperty(catalog[e.children.output.value])) {
+            output_det[catalog[e.children.output.value]] += Number(e.getElementsByClassName('ui input')[0].children.amount.value);
+          } else {
+            output_det[catalog[e.children.output.value]] = Number(e.getElementsByClassName('ui input')[0].children.amount.value);
+          }
+        }
+    }
+    return [outTotal,output_det];
+  }
+  if (typee == 'in') {
+    var inTotal = 0;
+    input_det = {};
+    for (i = 0; i < parentInputDiv.getElementsByClassName('input-group mt-1 mb-1').length; ++i) {
+        e = parentInputDiv.getElementsByClassName('input-group mt-1 mb-1')[i];
+        inTotal += Values[e.children.input.value]*e.getElementsByClassName('ui input')[0].children.amount.value/100;
+        if (input_det.hasOwnProperty(catalog[e.children.input.value])) {
+          input_det[catalog[e.children.input.value]] += Number(e.getElementsByClassName('ui input')[0].children.amount.value);
+        } else {
+          input_det[catalog[e.children.input.value]] = Number(e.getElementsByClassName('ui input')[0].children.amount.value);
+        }
+    }
+    return [inTotal,input_det];
+  }
+}
+
+
+function calc(typee) {
+    // calculate the input and blocked output values, those wont change
+    var inR = calcTotal('in');
+    var inTotal = inR[0];
+    var inDet = inR[1];
+    var blockedR = calcTotal('out', true);
+    var blockedTotal = blockedR[0];
+    var blockedDet = blockedR[1];
+
+    // autofill if needed
+    var is_autofill = document.getElementById('autofillbox').checked;
+    if (is_autofill && typee=='in') {
+        var nb_outputs = parentOutputDiv.getElementsByClassName('input-group mt-1 mb-1').length;
+        // count the number of non blocked boxes
+        nb_nonblock = 0;
+        for (i = 0; i < nb_outputs; ++i) {
+                  e = parentOutputDiv.getElementsByClassName('input-group mt-1 mb-1')[i].getElementsByClassName('ui checkbox')[0];
+            if (!e.children.block.checked) {
+                nb_nonblock += 1;
+            }
+        }
+        for (i = 0; i < nb_outputs; ++i) {
+            e = parentOutputDiv.getElementsByClassName('input-group mt-1 mb-1')[i];
+            if (!e.getElementsByClassName('ui checkbox')[0].children.block.checked) {
+              e.getElementsByClassName('ui input')[0].children.amount.value = Math.round(((inTotal-blockedTotal)/nb_nonblock)/(Values[e.children.output.value]/100));
+            }
+        }
+    }
+
+    // calculate the final output values
+    outR = calcTotal('out');
+    outTotal = outR[0];
+    outDet = outR[1];
+    totalTotal = inTotal-outTotal;
+    outDetF = {};
+    for (outres in outDet) {
+      if (blockedDet.hasOwnProperty(outres)) {
+        // it means that this resource is blocked
+        outDetF[outres] = [outDet[outres], true]
+      } else {
+        outDetF[outres] = [outDet[outres], false]
+      }
+    }
+
+    // write results
+    document.getElementById('resultInput').innerHTML = 'Seller sells for '+inTotal.toLocaleString();
+    document.getElementById('resultOutput').innerHTML = 'Buyer buys for '+outTotal.toLocaleString();
+    var additionnal = '';
+    if (totalTotal > 0) {
+        additionnal = 'Seller looses '+((inTotal-outTotal)*100/inTotal).toFixed(3)+'%';
+    }
+    if (totalTotal < 0) {
+        additionnal = 'Buyer looses '+((inTotal-outTotal)*100/inTotal).toFixed(3)+'%';
+    }
+    document.getElementById('resultTotal').innerHTML = 'Difference equals '+totalTotal.toLocaleString()+'<br>'+additionnal;
+    
+    //update details table
+    var inp_table = "<thead><tr><th>Resource</th><th>Amount</th><th>PP100</th><th>Value</th></tr></thead><tbody>\n";
+    for (elem in input_det) {
+      if (input_det[elem] > 0) {
+        inp_table += "<tr><td>"+elem+"</td><td>"+(input_det[elem]).toLocaleString()+"</td><td>"+(ValuesName[elem]).toLocaleString()+"</td><td>"+(ValuesName[elem]*input_det[elem]/100).toLocaleString()+"</td></tr>\n"
+      }
+    }
+    document.getElementById('input_detail').innerHTML = '</tbody>'+inp_table;
+    var outp_table = "<thead><tr><th>Resource</th><th>Amount</th><th>PP100</th><th>Value</th></tr></thead><tbody>\n";
+    for (elem in output_det) {
+      if (output_det[elem] > 0) {
+        outp_table += "<tr><td>"+elem+"</td><td>"+(output_det[elem]).toLocaleString()+"</td><td>"+(ValuesName[elem]).toLocaleString()+"</td><td>"+(ValuesName[elem]*output_det[elem]/100).toLocaleString()+"</td></tr>\n"
+      }
+    }
+    document.getElementById('output_detail').innerHTML = '</tbody>'+outp_table;
+
+    // finally, update the url hash
+    window.location.hash = btoa(JSON.stringify({'outDet': outDetF, 'inDet': inDet, 'autofill':is_autofill}));
+}
+
+function copyUrl() {
+  var copyText = document.getElementById('hiddenlink');
+  copyText.style.display = '';
+  copyText.value = window.location.href;
+  copyText.select();
+  copyText.setSelectionRange(0, 99999)
+  document.execCommand("copy");
+  copyText.style.display = 'none';
+  alert('URL copied to clipboard. Share it to the world!');
+}
+</script>
+{% endblock %}

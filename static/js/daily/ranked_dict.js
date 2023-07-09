@@ -1,0 +1,1 @@
+var ranked_dict = {}

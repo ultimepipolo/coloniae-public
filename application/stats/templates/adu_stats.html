@@ -1,0 +1,243 @@
+{% extends "squelette.html" %}
+
+{% block titre %}ADU Leaderboard and Stats - Coloniae{% endblock %}
+
+{% block corps %}
+<div class="ui container fluid">
+
+  <h1 class="ui center aligned header">ADU Leaderboard and Stats</h1>    
+
+  <div class="ui container fluid" style="margin-top:3%">
+    <div class="ui horizontal divider">Leaderboards</div>
+    <div class="ui left action small input" style="margin-right:5px">
+      <div class="ui compact search selection dropdown" id="reslead_select">
+        <div class="text"></div>
+        <i class="dropdown icon"></i>
+      </div>
+      <button onclick="javascript:change_resleads();" class="ui button" style="border-bottom-right-radius: 0.285714rem; border-top-right-radius: 0.285714rem">Resources Leaderboard</button>
+    </div>
+    <button onclick="javascript:change_utility('Power');" class="ui small button" type="button">Power</button>
+    <button onclick="javascript:change_utility('Bandwidth');" class="ui small button" type="button">Bandwidth</button>
+    <!--<div class="ui horizontal divider">Stats</div>
+    <button onclick="javascript:change_adunbcolonies();" class="ui small button" type="button">Number of ADU colonies</button>
+    <button onclick="javascript:change_govlevels();" class="ui small button" type="button">Government levels</button>
+    <button onclick="javascript:change_salaries();" class="ui small button" type="button">Salaries</button>-->
+  </div>
+  
+  <div class="ui container fluid" id="container_main" style="margin-top: 3%">
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/se/dt-1.10.20/datatables.min.css"/>
+<script type="text/javascript" src="https://cdn.datatables.net/v/se/dt-1.10.20/datatables.min.js"></script>
+
+<script src="https://code.highcharts.com/stock/highstock.js"></script>
+<script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+<script src="https://code.highcharts.com/stock/modules/export-data.js"></script>
+
+<script type="text/javascript">
+var badges_catalog = {{badges_catalog | tojson}};
+$( document ).ready(function() {
+  $.getJSON('/static/json/gameversions/{{mycolony_version}}.json', function (data) {
+      var allresources = data.resources;
+      var reslist_for_order = []; // only to be able to have alphabetical order
+      for (var i=0; i<allresources.length; i++) {
+        var temp_res = allresources[i];
+        reslist_for_order.push(temp_res.name);
+      }
+      reslist_for_order.sort();
+      var resources_dropdown_values = [];
+      for (var i=0; i<reslist_for_order.length; i++) {
+        var temp_res = reslist_for_order[i];
+        if (i==0) {
+          resources_dropdown_values.push({'name':temp_res, 'value':temp_res, 'selected':true});
+        } else {
+          resources_dropdown_values.push({'name':temp_res, 'value':temp_res});
+        }
+      }
+      //$('#reslead_select').dropdown();
+      $('#reslead_select').dropdown({ values: resources_dropdown_values });
+  });
+});
+
+function change_adunbcolonies() {
+    var element_id = 'container_main';
+    document.getElementById(element_id).innerHTML = '<div class="ui segment"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+    $.getJSON('{{url_for('api.adustats')}}?command=adunbcolonies', function (data) {
+        document.getElementById(element_id).innerHTML = '';
+        if (data.error) {
+            document.getElementById(element_id).innerHTML = '<p style="text-align:center">Error : '+data.error+'</p>';
+        } else {
+            document.getElementById(element_id).innerHTML = 'Current number of ADU colonies : '+data.adunbcolonies;
+        }
+    });
+};
+
+
+function change_resleads() {
+    var res = $('#reslead_select').dropdown('get value');
+    if (res=='') {return;}
+    var element_id = 'container_main';
+    document.getElementById(element_id).innerHTML = '<div class="ui segment"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+    var f_res = res.replace(/ /g, "_");
+    $.getJSON('/static/json/aduresleads/'+f_res+'.json', function (result) {
+        if ($.fn.dataTable.isDataTable('#table_main')) {
+          $('#table_main').DataTable().destroy();
+        }
+        var table_str = '<p>Last updated '+( new Date(Number(result.updated)*1000)).toLocaleString()+'. Updates hourly.</p><table id="table_main" class="ui celled table"><thead><tr><th>Rank</th><th>Name</th><th>Owner</th><th>Amount</th></tr></thead><tbody>';
+        for (var i=0;result.data.length>i;i++) {
+            // charter is 0, amount is 1, name is 2, ape account is 3.
+            table_str += '<tr><td>'+(i+1)+'</td><td><a href="'+Flask.url_for('adu.adu_view', {"charter":result.data[i][0]})+'">'+result.data[i][2]+'</a></td><td><a href="'+Flask.url_for('main.player', {"username":result.data[i][3]})+'">'+formatThisName(result.data[i][3])+'</a></td><td>'+(result.data[i][1]).toLocaleString('fr')+'</td></tr>';
+        }
+        table_str += '</tbody></table>';
+        document.getElementById(element_id).innerHTML = table_str;
+        $('#table_main').DataTable();
+    });
+};
+
+function change_utility(util) {
+    var element_id = 'container_main';
+    document.getElementById(element_id).innerHTML = '<div class="ui segment"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+    var f_res = util.replace(/ /g, "_");
+    $.getJSON('/static/json/aduresleads/'+f_res+'.json', function (result) {
+        if ($.fn.dataTable.isDataTable('#table_main')) {
+          $('#table_main').DataTable().destroy();
+        }
+        var table_str = '<p>Last updated '+( new Date(Number(result.updated)*1000)).toLocaleString()+'. Updates hourly.</p><table id="table_main" class="ui celled table"><thead><tr><th>Rank</th><th>Name</th><th>Owner</th><th>Usage</th><th>Total</th></tr></thead><tbody>';
+        for (var i=0;result.data.length>i;i++) {
+            table_str += '<tr><td>'+(i+1)+'</td><td><a href="'+Flask.url_for('adu.adu_view', {"charter":result.data[i].Charter})+'">'+(char_to_name[result.data[i].Charter] || result.data[i].Charter)+'</a></td><td><a href="'+Flask.url_for('main.player', {"username":char_to_owner[result.data[i].Charter]||'undefined'})+'">'+formatThisName(char_to_owner[result.data[i].Charter])+'</a></td><td>'+(result.data[i].y[f_res+' usage']).toLocaleString('fr')+'</td><td>'+(result.data[i].y[f_res+' total']).toLocaleString('fr')+'</td></tr>';
+        }
+        table_str += '</tbody></table>';
+        document.getElementById(element_id).innerHTML = table_str;
+        $('#table_main').DataTable();
+    });
+};
+
+function change_salaries() {
+    makeSalariesTable('adu-salaries', 'container_main', '1', 0, false);
+};
+
+function change_govlevels() {
+    makePieChart('adu-govlevels', 'container_main', '1', 'Pie chart showing the number of each government levels among ADU colonies.');
+};
+
+function change_power() {
+    makeSalariesTable('adu-power', 'container_main', '1', 2, true);
+};
+
+function change_bandwidth() {
+    makeSalariesTable('adu-bandwidth', 'container_main', '1', 2, true);
+};
+
+function makeTable(name, element_id, ts) {
+    document.getElementById(element_id).innerHTML = '<div class="ui segment"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+    $.getJSON('{{url_for('api.adustats')}}?command='+name+'&charter='+ts, function (data) {
+        document.getElementById(element_id).innerHTML = '';
+        if (data.error) {
+            document.getElementById(element_id).innerHTML = '<p style="text-align:center">Error : '+data.error+'</p>';
+        } else {
+            var table_str = '<table class="ui celled table"><thead><tr><th>Rank</th><th>Name</th><th>Owner</th><th>Amount</th></tr></thead><tbody>';
+            for (var i=0;data.length>i;i++) {
+                table_str += '<tr><td>'+(i+1)+'</td><td><a href="'+Flask.url_for('adu.adu_view', {"charter":data[i].Charter})+'">'+data[i].name+'</a></td><td><a href="'+Flask.url_for('main.player', {"username":data[i].ape_account})+'">'+formatThisName(data[i].ape_account)+'</a></td><td>'+(data[i].y).toLocaleString('fr')+'</td></tr>';
+            }
+            table_str += '</tbody></table>';
+            document.getElementById(element_id).innerHTML = table_str;
+        }
+    });
+};
+
+function makeSalariesTable(name, element_id, ts, column_to_order, change_to_local) {
+    document.getElementById(element_id).innerHTML = '<div class="ui segment"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+    $.getJSON('{{url_for('api.adustats')}}?command='+name+'&charter='+ts, function (data) {
+        document.getElementById(element_id).innerHTML = '';
+        if (data.error) {
+            document.getElementById(element_id).innerHTML = '<p style="text-align:center">Error : '+data.error+'</p>';
+        } else {
+            var keys_list = [];
+            for (var i=0;data.length>i;i++) {
+                current_keys = Object.keys(data[i].y);
+                for (var j=0;current_keys.length>j;j++) {
+                    if (!keys_list.includes(current_keys[j])) {
+                        keys_list.push(current_keys[j]);
+                    }
+                }
+            }
+            var table_str = '<table id="table_'+element_id+'" class="ui celled table"><thead><tr><th>Name</th><th>Owner</th>';
+            for (var i=0;keys_list.length>i;i++) {
+                table_str += '<th>'+keys_list[i]+'</th>';
+            }
+            table_str+= '</tr></thead><tbody>';
+            for (var i=0;data.length>i;i++) {
+                table_str+='<tr><td><a href="{{url_for('adu.adu_view', charter='')}}'+data[i].Charter+'">'+char_to_name[data[i].Charter]+'</a></td><td><a href="{{url_for('main.player', username='')}}'+char_to_owner[data[i].Charter]+'">'+formatThisName(char_to_owner[data[i].Charter])+'</a></td>';
+                for (var j=0;keys_list.length>j;j++) {
+                    if (data[i]['y'][keys_list[j]]!=undefined) {
+                        if (change_to_local) {
+                            table_str += '<td>'+(data[i]['y'][keys_list[j]]).toLocaleString('fr')+'</td>';
+                        } else {
+                            table_str += '<td>'+(data[i]['y'][keys_list[j]])+'</td>';
+                        }
+                    } else {
+                        table_str += '<td></td>';
+                    }
+                }
+                table_str += '</tr>';
+            }
+            table_str += '</tbody></table>';
+            document.getElementById(element_id).innerHTML = table_str;
+            table = $('#table_'+element_id).DataTable( {
+                lengthMenu: [[20, 50, 100, -1,], [20, 50, 100, "All"]],
+                order: [[ column_to_order, "desc" ]],
+                "scrollX": true,
+            } );
+        }
+    });
+};
+
+function makePieChart(name, element_id, ts, custom_subtitle) {
+    document.getElementById(element_id).innerHTML = '<div class="ui segment"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+    $.getJSON('{{url_for('api.adustats')}}?command='+name+'&charter='+ts, function (data) {
+        document.getElementById(element_id).innerHTML = '';
+        if (data.hasOwnProperty('error')) {
+            document.getElementById(element_id).innerHTML = '<p style="text-align:center">Error : '+data.error+'</p>';
+            return;
+        }
+        Highcharts.chart(element_id, {
+            chart: {
+                plotBackgroundColor: null,
+                plotBorderWidth: null,
+                plotShadow: false,
+                type: 'pie'
+            },
+            title :{
+                text: null
+            },
+            subtitle :{
+                text: custom_subtitle
+            },
+            tooltip: {
+                pointFormat: '{series.name}: <b>{point.y}</b>'
+            },
+            plotOptions: {
+                pie: {
+                    allowPointSelect: true,
+                    cursor: 'pointer',
+                    dataLabels: {
+                        enabled: true,
+                        format: '<b>{point.name}</b>: {point.percentage:.1f} %',
+                        style: {
+                            color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                        }
+                    }
+                }
+            },
+            series: [{
+                name: 'Colonies',
+                colorByPoint: true,
+                data: data
+            }]
+        });
+    });
+};
+</script>
+{% endblock %}

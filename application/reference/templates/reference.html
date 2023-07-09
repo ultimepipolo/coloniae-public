@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+
+<head>
+	<title>My Colony Reference - Online Encyclopedia</title>
+	<meta charset="utf-8">
+	<meta name="author" content="Rent Demon and Sobeirannovaocc, for Ape Apps">
+	<link rel="shortcut icon" href="/static/favicon.png"  type="image/x-icon">
+	<!-- Mobile viewport -->
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+ 
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-124248446-1"></script>
+  <script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  
+  gtag('config', 'UA-124248446-1');
+  </script>
+  
+	<!-- CSS-->
+	<link rel="stylesheet" href="/static/reference/css/style.css" />
+	<!-- JS-->
+	<script type="text/javascript" src="/static/reference/js/libs/jquery310.min.js"></script>
+	<script type="text/javascript" src="/static/reference/js/libs/datatables.min.js"></script>
+	<script type="text/javascript" src="/static/reference/js/libs/jquery.dataTables.yadcf.js"></script>
+	<script type="text/javascript" src="/static/reference/js/game_version.js"></script>
+	<script type="text/javascript" src="/static/reference/js/global_tools.js"></script>
+	<script type="text/javascript" src="/static/reference/js/global_items.js"></script>
+	<script type="text/javascript" src="/static/reference/js/global_descs.js"></script>
+	<script type="text/javascript" src="/static/reference/js/global_changelogs.js"></script>
+	<!-- end JS-->
+</head>
+
+<body>
+
+	<header>
+		<div id="banner">        
+        	<div class="banner-brand"><a href="{{url_for('reference.reference_index')}}" id="page-title">  
+				<img  id="logo" src="/static/reference/images/lander.png"/>  
+				My Colony Reference</a>
+			</div> 
+		</div>
+    <nav id="topnav" role="navigation" class="row">
+			<div class="menu-toggle"><div></div><div></div><div></div></div>
+			<ul class="srt-menu" id="menu-main-navigation">
+         <li id="menu-1"><a href="{{url_for('main.main_index')}}">&larr;&nbsp;&nbsp;Back to Coloniae</a>
+         </li>
+  			 <li id="menu0"><a href="{{url_for('reference.reference_index')}}">Home page</a>
+         </li>
+         <li id="menu1"><a href="#">Basic Tables</a>
+            <ul>
+                <li id="menu1.1"><a href="{{url_for('reference.reference', page='general')}}">General Table</a></li>
+                <li id="menu1.2"><a href="{{url_for('reference.reference', page='cost')}}">Costs Table</a></li>
+                <li id="menu1.3"><a href="{{url_for('reference.reference', page='storages')}}">Storages Table</a></li>
+  	  
+            </ul>
+        </li>
+        <li id="menu2"><a href="#">Ratios Tables</a>
+            <ul>
+                <li id="menu2.1"><a href="{{url_for('reference.reference', page='ratio_tick')}}">Ratios per Tick</a></li>
+                <li id="menu2.2"><a href="{{url_for('reference.reference', page='ratio_min')}}">Ratios per Minute</a></li>
+            </ul>
+        </li>
+        <li id="menu4"><a href="#">Other tables</a>
+            <ul>
+                <li id="menu4.1"><a href="{{url_for('reference.reference', page='col_gen')}}">Colonist generation</a></li>
+                <li id="menu4.2"><a href="{{url_for('reference.reference', page='gift_caps')}}">Gift and trade limits</a></li>
+                <li id="menu4.3"><a href="{{url_for('reference.reference', page='changelogs')}}">Changelogs</a></li>
+            </ul>
+        </li>
+        <!--<li id="menu3"><a href="#">Tech Trees</a>
+            <ul>
+                <li id="menu3.1"><a href="{{url_for('reference.reference', page='techs_h')}}">Humans Tech Tree</a></li>
+                <li id="menu3.2"><a href="{{url_for('reference.reference', page='techs_i')}}">Insectoids Tech Tree</a></li>
+            </ul>
+        </li>-->
+        <li><a href="#">My Colony Links</a>
+            <ul>
+                <li><a href="https://www.apewebapps.com/my-colony/" target="_blank">My Colony Browser</a></li>                      
+                <li><a href="https://market.ape-apps.com/my-colony.html" target="_blank">Other Versions</a></li>
+                <li><a href="https://www.ape-apps.com/viewpage.php?p=20" target="_blank">Forum</a></li>
+                <li><a href="https://chat.ape-apps.com/?channel=my-colony" target="_blank">Chat Room</a></li>
+                <li><a href="https://mc1.my-colony.com/colonies/" target="_blank">Top 10 populations</a></li>
+            </ul>
+        </li>
+			</ul>	
+			<div id="tableform">
+				<div class="col-search" >
+					<input id="searchdatalist" type="text" class="form-control" placeholder="Type something...">	
+				</div>
+				<button type="button" id="cleart" class="btn">Clear</button>
+			</div>
+		</nav>
+	</header>
+	
+	<div id="page-content-wrapper">
+		<div id="item-description" class="container-fluid">
+      <div>
+			<section class="item-desc-header">
+				<div class="row">
+					<div class="col-icon">
+						<div class="icon">
+							<img id="item-image" src="" alt=""></img>
+						</div>
+					</div>
+						<div class="col-close1 currency">
+							<h4><a class="item-details-close">Close</a></h4>
+						</div>
+					<div class="col-name">
+						<h3 id="item-name"></h3>
+					</div>
+					<div class="col-close2 currency">
+						<h4><a class="item-details-close">Close</a></h4>
+					</div>
+				</div>
+				<br/>
+				<div id="item-descriptionstring">
+					<div class="item-properties"></div>
+				</div>
+			</section>
+			<section id="item-caracteristics" class="item-desc-content col-details">
+				<h4 id="charac-header"><strong>Characteristics</strong></h4>
+				<!--buildings-->
+				<div id="item-charac-tilesize">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-releaseversion">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-buildlimit">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-consulate">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-capitol">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-embassy">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-tradedepot">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-comshub">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-occupation">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-workerneeded">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-workers">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-provideshelter">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-canheal">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-requiresiq">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-educates">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-providesiq">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-entertain">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-storage">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-tax">
+					<div class="item-properties"></div>
+				</div>
+				<!--resources-->
+				<div id="item-charac-resourceLimited">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-resourcebasePrice">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-resourcetoxicRate">
+					<div class="item-properties"></div>
+				</div>
+				<!--ici mettre le remplacement harvested by links 2-->
+				<div id="item-charac-proceesedlists">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-storedbylist">
+					<div class="item-properties"></div>
+				</div>
+				<!--deposits-->
+				<div id="item-depprovides">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-depcapacity">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-depspreadrate">
+					<div class="item-properties"></div>
+				</div>
+				<!--vehicles and pavements-->
+				<div id="item-charac-harvestkappa">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-drivespeed">
+					<div class="item-properties"></div>
+				</div>
+				<!--races civs and maps-->
+				<div id="item-charac-difficulty">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-narcotics">
+					<div class="item-properties"></div>
+				</div>
+				<!--ici mettre le remplacement de playable civs for map and race links2-->
+				<div id="item-charac-links2">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-race">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-startingcolonists">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-availablemaps">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-startingdeposits">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-startingtechs">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-startingbuildings">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-startingbuilding">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-charac-startingvehicles">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-prod-refines">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-prod-imports">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-prod-exports">
+					<div class="item-properties"></div>
+				</div>
+				<h4 id="prod-header"><strong>Resource produced</strong></h4>
+				<div id="item-prod-provideutility">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-prod-generate">
+					<div class="item-properties"></div>
+				</div>
+				<h4 id="transf-header"><strong>Resource transformed</strong></h4>
+				<div id="item-prod-smelt">
+					<div class="item-properties"></div>
+				</div>
+				<h4 id="utility-header"><strong>Utilities to operate</strong></h4>
+				<div id="item-prod-requtility">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-prod-reqfuel">
+					<div class="item-properties"></div>
+				</div>
+				<div>
+					<p id="generateorsmelt" class="note"><small>
+					<i>* approximatively 20-25 ticks/second<br/>
+					* when worker is needed to operate, tick-rate depends on how many worker are actives:<br/>
+					Round duration = </i><b class="noteb">duration / active workers</b><i> ticks</i>
+					</small></p>
+				</div>
+			</section>
+			<section id="item-requirements" class="item-desc-content col-details">
+				<h4 id="require-header"><strong>Requirements</strong></h4>
+				<div id="item-requirements-stage">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-requirements-independence">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-requirements-tech">
+					<div class="item-properties"></div>
+				</div>
+    			{% if logged_in %}
+				<!-- Trigger/Open The Modal -->
+				<div id="item-requirements-cibt">
+					<div class="item-properties"></div>
+				</div>
+    			{% endif %}
+				<h4 id="cost-header"><strong>Cost to build</strong></h4>
+				<div id="item-requirements-cost">
+					<div class="item-properties"></div>
+				</div>
+				<h4 id="sell-header"><strong>Sell return value</strong></h4>
+				<div id="item-requirements-sell">
+					<div class="item-properties"></div>
+				</div>
+			</section>
+			<section id="item-links" class="item-desc-content col-details">
+				<h4 id="links-header"><strong>Links</strong></h4>						
+				<div id="item-links-links">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-links-canbuild">
+					<div class="item-properties"></div>
+				</div>
+				<div id="item-linksratio">
+					<div class="item-properties"></div>
+				</div>							
+			</section>
+			</div>
+    </div>
+		<div class="container-fluid">
+			<div id="loading-overlay" class="jumbotron">
+				<h1>Initializing...</h1>
+			</div>
+
+			{% block contents %}
+      {% endblock %}
+      
+		</div>
+	</div>
+
+    {% if logged_in %}
+	<!-- The Modal -->
+	<div id="cibt_modal" class="modal">
+	  <!-- Modal content -->
+	  <div class="modal-content">
+	    <span onclick="javascript:close_cibt()" class="close">&times;</span>
+	  	<h4>Can I build this?</h4>
+	  	<p style="margin-bottom:10px;">This tool lets you check if you can build the building and more importantly how far you are from unlocking it!<br>Pease note that <b>you need ADU enabled</b> (and at least one fetch from version 1.5.0 or above).</p>
+	    <label for="cibt_colonies" id="cibt_colonies_label">Please wait...</label>
+		<select id="cibt_colonies"></select> 
+		<button id="cibt_colonies_button" style="margin-bottom:10px;" onclick="javascript:cibt_stage_coldata();" disabled="true">Continue</button>
+		<p id="cibt_final_summary">Please wait...</p>
+		<div class="custom-accordion">
+			<button class="custom-accordion-header">Resources</button>
+			<div class="custom-accordion-contents" id="cibt_final_resources"></div>
+			<button class="custom-accordion-header">Technologies</button>
+			<div class="custom-accordion-contents" id="cibt_final_techs"></div>
+			<button class="custom-accordion-header">Vechicles</button>
+			<div class="custom-accordion-contents" id="cibt_final_vehicles"></div>
+			<div id="cibt_final_independence"></div>
+			<div id="cibt_final_atmostage"></div>
+		</div>
+	  </div>
+	</div>
+    {% endif %}
+ 
+	<footer>
+      {% if logged_in %}
+    	<li class="version-infos">Currently logged in as <a href="{{url_for('perso.perso_index')}}">{{logged_in}}</a>.</li>
+      {% else %}
+    	<li class="version-infos">Not logged in.</li>
+      {% endif %}
+    	<li id="ref-version-number" class="version-infos">Reference version</li>
+		  <li id="game-version-number" class="version-infos">Datas from version</li>
+      <li id="trees-version-number" class="version-infos">Tech trees data from version</li>
+	</footer>
+
+<!--<script>tools.includeHTML();</script>  -->
+<script src="/static/reference/js/page_{{ page }}.js"></script>
+<script src="/static/reference/js/global_nav.js"></script>
+
+<script>
+$('#ref-version-number').append(" "+referenceVersion+"");
+$('#game-version-number').append(" "+gameVersion+"");
+$('#trees-version-number').append(" "+techTreesVersion+"");
+
+{% if logged_in %}
+$(document).ready(function(){
+	var acc = document.getElementsByClassName("custom-accordion-header");
+	for (var i = 0; i < acc.length; i++) {
+		acc[i].addEventListener("click", function() {
+			/* Toggle between adding and removing the "active" class,
+			to highlight the button that controls the panel */
+			this.classList.toggle("active");
+
+			/* Toggle between hiding and showing the active panel */
+			var panel = this.nextElementSibling;
+			panel.classList.toggle('active');
+
+			/*if (panel.style.display === "block") {
+			  panel.style.display = "none";
+			} else {
+			  panel.style.display = "block";
+			}*/
+		});
+	} 
+});
+
+function close_cibt() {
+    document.getElementById('cibt_modal').style.display = 'none';
+    // reinitialize fields
+	document.getElementById('cibt_final_summary').innerHTML = 'Please wait...';
+	document.getElementById('cibt_final_resources').innerHTML = '';
+	document.getElementById('cibt_final_vehicles').innerHTML = '';
+	document.getElementById('cibt_final_techs').innerHTML = '';
+}
+function open_cibt() {
+	document.getElementById('cibt_modal').style.display = 'block';
+	cibt_stage_colonies();
+}
+
+function cibt_stage_colonies() {
+	if (document.getElementById('cibt_colonies').innerHTML != '') {
+		return;
+	}
+	$.getJSON('{{url_for('api.cibt', stage='colonies')}}', function(result){
+	    var thtml = '';
+	    for (ch = 0; result.length>ch ; ch++) {
+	      thtml += '<option value="'+result[ch][0]+'">'+result[ch][1]+' ('+result[ch][0]+')</option>';
+	    }
+		document.getElementById('cibt_colonies_label').innerHTML = 'Please choose a colony from the list.';
+	    document.getElementById('cibt_colonies').innerHTML = thtml;
+	    document.getElementById("cibt_colonies_button").disabled = false;
+  	});
+}
+function cibt_stage_coldata() {
+	document.getElementById("cibt_colonies_button").disabled = true;
+	document.getElementById('cibt_final_summary').innerHTML = 'Please wait...';
+	document.getElementById('cibt_final_resources').innerHTML = '';
+	document.getElementById('cibt_final_vehicles').innerHTML = '';
+	document.getElementById('cibt_final_techs').innerHTML = '';
+	var selected_charter = document.getElementById("cibt_colonies").value;
+	$.getJSON('{{url_for('api.cibt', stage='coldata')}}?charter='+selected_charter, function(result){
+		console.log(_current_item);
+		// init
+	    var rhtml = '';
+	    var thtml = '';
+	    var vhtml = '';
+	    var can_build = true;
+	    // computing res
+	    var city_resources_list = Object.keys(result.resources);
+	    var building_resources_list = Object.keys(_current_item.cost);
+	    building_resources_list.sort();
+	    for (i = 0; building_resources_list.length>i ; i++) {
+	    	var tmp_res = building_resources_list[i];
+			if (!city_resources_list.includes(tmp_res)) {
+				can_build = false;
+				rhtml += '<p class="cibt-no">'+tmp_res+' <span style="color:red;">(0/'+_current_item.cost[tmp_res].toLocaleString()+')</span></p>';
+			} else {
+				if (result.resources[tmp_res]<_current_item.cost[tmp_res]) {
+					rhtml += '<p class="cibt-yes">'+tmp_res+' <span style="color:red;">('+result.resources[tmp_res].toLocaleString()+'/'+_current_item.cost[tmp_res].toLocaleString()+')</span></p>';
+				} else {
+					rhtml += '<p class="cibt-yes">'+tmp_res+' ('+result.resources[tmp_res].toLocaleString()+'/'+_current_item.cost[tmp_res].toLocaleString()+')</p>';
+				}
+			}
+	    }
+	    // computing techs
+	    var city_techs_list = result.techs;
+	    var building_techs_list = _current_item.requiresTech;
+	    if (building_techs_list!=null) {
+		    building_techs_list.sort();
+		    for (i = 0; building_techs_list.length>i ; i++) {
+		      if (!city_techs_list.includes(building_techs_list[i])) {
+		      	can_build = false;
+		      	thtml += '<p class="cibt-no">'+building_techs_list[i]+'</p>';
+		      } else {
+		      	thtml += '<p class="cibt-yes">'+building_techs_list[i]+'</p>';
+		      }
+		    }
+		}
+	    if (result.techs.length==0) {
+	    	thtml += '<p style="color:red;">All the technologies are missing. You want to get an ADU fetch from version 1.5.0 or later.</p>';
+	    }
+	    // computing vechicles
+	    var building_vehicles_list = [];
+		for (var i = itemLinks.length - 1; i >= 0; i--) {
+			if (_current_item.name == itemLinks[i].dst && 'canBuild' == itemLinks[i].type) {
+				building_vehicles_list.push(itemLinks[i].src);
+			}
+		}
+		building_vehicles_list.sort();
+		var city_vehicles_list = result.vehicles;
+		var tnv = 0; // temp number of vechicles (wont be able to build only if got zero)
+		for (i = 0; building_vehicles_list.length>i ; i++) {
+	      if (!city_vehicles_list.includes(building_vehicles_list[i])) {
+	      	vhtml += '<p class="cibt-no">'+building_vehicles_list[i]+'</p>';
+	      } else {
+	      	tnv += 1;
+	      	vhtml += '<p class="cibt-yes">'+building_vehicles_list[i]+'</p>';
+	      }
+	    }
+	    vhtml += '<p>Note that if you are on regions, some vehicles might be missing from a particular city, but you can always move them across.</p>';
+	    if (tnv<1) {
+	    	can_build = false;
+	    }
+	    // computing indepence and atmos stage
+	    if (_current_item.reqIndependence){
+	    	if (result.independent) {
+		    	var ihtml = '<p class="cibt-yes">Independence required and declared</p>';
+		    } else {
+		    	var ihtml = '<p class="cibt-no">Independence required but not declared</p>';
+		    	can_build = false;
+		    }
+	    } else {
+		    var ihtml = '<p class="cibt-yes">Independence not required</p>';
+	    }
+	    if (Number(_current_item.requiresStage.raw) > result.atmostage) {
+		    can_build = false;
+	    	var ahtml = '<p class="cibt-no">Atmosphere stage required : '+_current_item.requiresStage.raw+'</p>';
+	    } else {
+		    var ahtml = '<p class="cibt-yes">Atmosphere stage required : '+_current_item.requiresStage.raw+'</p>';
+	    }
+	    // parsing
+	    if (can_build) {
+	    	var can_build_number = Number.MAX_SAFE_INTEGER;
+	    	for (resource in _current_item.cost) {
+	    		var tcb = Math.floor(result.resources[resource]/_current_item.cost[resource]);
+	    		if (tcb<can_build_number) {
+	    			can_build_number = tcb;
+	    		}
+	    	}
+	    	if (can_build_number>0) {
+	    		var summary_message = 'You can build the '+_current_item.name+'! Up to '+can_build_number.toLocaleString()+' given your current resources.'
+	    	} else {
+	    		var summary_message = 'You can technically build the '+_current_item.name+' but you will need a few more resources (check the resources tab).'
+	    	}
+	    } else {
+	    	var summary_message = 'It seems like you can\'t build this! Open the tabs below to see what is missing.';
+	    }
+		document.getElementById("cibt_colonies_button").disabled = false;
+		document.getElementById('cibt_final_summary').innerHTML = summary_message;
+	    document.getElementById('cibt_final_resources').innerHTML = rhtml;
+	    document.getElementById('cibt_final_vehicles').innerHTML = vhtml;
+	    document.getElementById('cibt_final_techs').innerHTML = thtml;
+	    document.getElementById('cibt_final_independence').innerHTML = ihtml;
+	    document.getElementById('cibt_final_atmostage').innerHTML = ahtml;
+  	});
+}
+{% endif %}
+
+</script>
+{% block scripts %}
+{% endblock %}
+
+</body>
+</html>

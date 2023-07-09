@@ -1,0 +1,92 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Today's Top Colonies - Coloniae{% endblock %}
+
+{% block corps %}
+<!-- Articles -->
+<div class="ui main text container">
+    <h1 class="ui center aligned header">Today's Top Colonies</h1>
+    <p>Leaderboards last updated <span id="lastupdatelbs"></span>.<br>
+    Only active colonies are shown. An active colony is a colony that was played at least 3 days during the last 7 days.<br>
+    Below the number is the evolution since yesterday.</p>
+    <div class="ui three column stackable grid">
+      <div class="column">
+        <div class="ui horizontal divider">
+          Population
+        </div>
+        <div class="ui items" id="lbpopdiv"></div>
+      </div>
+      <div class="column">
+        <div class="ui horizontal divider">
+          Gross Domestic Product
+        </div>
+        <div class="ui items" id="lbgdpdiv"></div>
+      </div>
+      <div class="column">
+        <div class="ui horizontal divider">
+          Commonwealth size
+        </div>
+        <div class="ui items" id="lbcwdiv"></div>
+      </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script type="text/javascript" src="/static/js/daily/leads.js"></script>
+<script type="text/javascript">
+function parseLeads(leads) {
+  var temp_inner = '';
+  for (var i=0; i<leads.length; i++) {
+    var curr_colony = leads[i];
+    if (curr_colony[4]=='No change') {
+        var cc = 'grey';
+        var ch = 'No change';
+    } else {
+        if (curr_colony[4].charAt(0)=='-') {
+            var cc = 'red';
+        } else {
+            var cc = 'green';
+        }
+        var ch = curr_colony[4]+' ('+curr_colony[5]+')';
+    }
+    if (curr_colony[6]==null) {
+        var ss = 'background';
+    } else {
+        var ss = 'screenshots/ss-'+curr_colony[6];
+    }
+    temp_inner += '<div class="item" style="font-size:70%"><div class="ui tiny image"><img src="https://mc1.my-colony.com/'+ss+'.jpg" alt="Image Loading..."></div><div class="content"><a class="header" href="{{url_for('main.colonies', charter='')}}'+curr_colony[0]+'" target="_blank">'+curr_colony[1]+' ('+curr_colony[2]+')</a><div class="description">'+curr_colony[3]+'</div><div class="extra" style="color:'+cc+'">'+ch+'</div></div></div>';
+  }
+  return temp_inner;
+}
+function parseLeadsCW(leads) {
+  var temp_inner = '';
+  for (var i=0; i<leads.length; i++) {
+    var curr_colony = leads[i];
+    if (curr_colony[4]=='No change') {
+        var cc = 'grey';
+    } else {
+        if (curr_colony[4].charAt(0)=='-') {
+            var cc = 'red';
+        } else {
+            var cc = 'green';
+        }
+    }
+    if (curr_colony[5]==null) {
+        var ss = 'background';
+    } else {
+        var ss = 'screenshots/ss-'+curr_colony[5];
+    }
+    temp_inner += '<div class="item" style="font-size:70%"><div class="ui tiny image"><img src="https://mc1.my-colony.com/'+ss+'.jpg" alt="Image Loading..."></div><div class="content"><a class="header" href="{{url_for('main.colonies', charter='')}}'+curr_colony[0]+'" target="_blank">'+curr_colony[1]+' ('+curr_colony[2]+')</a><div class="description">'+curr_colony[3]+'</div><div class="extra" style="color:'+cc+'">'+curr_colony[4]+'</div></div></div>';
+  }
+  return temp_inner;
+}
+$(document).ready(function(){
+  document.getElementById('lastupdatelbs').innerHTML = (new Date(leads_last_update)).toLocaleString();
+  document.getElementById('lbpopdiv').innerHTML = parseLeads(leads_pop);
+  document.getElementById('lbgdpdiv').innerHTML = parseLeads(leads_gdp);
+  document.getElementById('lbcwdiv').innerHTML = parseLeadsCW(leads_cw);
+});
+</script>
+{% endblock %}

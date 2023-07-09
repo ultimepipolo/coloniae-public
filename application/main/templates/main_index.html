@@ -1,0 +1,165 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Welcome to Coloniae{% endblock %}
+
+{% block corps %}
+<!-- Articles -->
+<div class="ui text container fluid">
+    <h1 class="ui center aligned header"><img class="ui image" src="/static/media/favicon_full.png" alt="ColoniÃ¦" style="width:50%"></h1>
+
+    <div class="mx-header" style="margin-top: 3%;"><i class="info icon"></i>My Colony Status<span class="mobile-hide" style="float:right; font-size: 14px;">Last updated <span name="date">{{last_updated}}</span></span></div>
+    <div class="ui segments custom-segments">
+      <div class="ui segment">
+        <h4 class="ui header">Current stable version<span style="float:right;">{{mycolony_version}}</span></h4>
+      </div>
+      <div class="ui segment">
+        <h4 class="ui header">Current beta version<span style="float:right;">{{mycolony_beta_version}}</span></h4>
+      </div>
+      <div class="ui segment">
+        <h4 class="ui header">Registered players<span style="float:right;" id="playersnumber"></span></h4>
+      </div>
+      <div class="ui segment">
+        <h4 class="ui header">Registered colonies<span style="float:right;" id="coloniesnumber"></span></h4>
+      </div>
+      <div class="ui segment">
+        <h4 class="ui header">Market purchases last 24 hours<span style="float:right;" name="updatelocalestring">{{gbt_trades_nb}}</span></h4>
+      </div>
+    </div>
+    
+    {% if articles|length > 0 %}
+    <div class="mx-header" style="margin-top: 3%;"><i class="newspaper outline icon"></i>Latest News<span style="float:right; font-size: 14px;"><a href="{{url_for('news.news_page', pnb=1)}}">See older news</a><span style="margin-left:5px;margin-right:5px;color:#4b4b4b;">&bull;</span><a href="{{url_for('integrations.rss_feed')}}"><i class="rss icon"></i></a></span></div>
+    <div class="ui segments custom-segments">
+      {% for article in articles %}
+      <div class="ui segment">
+        <div class="ui stackable grid custom-articlehead">
+          <div class="height wide column left aligned text">
+            <h3 class="ui header"><a href="{{url_for('news.news_view', nid=article.nid)}}">{{article.title}}</a></h3>
+          </div>
+          <div class="height wide column right aligned text">
+            <h4><i style="font-size:.85em">{{article.ape_account}}, <span name="date">{{article.created}}</span></i></h4>
+          </div>
+        </div>
+        <a href="{{url_for('news.news_view', nid=article.nid)}}"><img class="ui centered image" src="/static/media/uploads/article_banner_{{article.nid}}.jpg" style="margin-bottom: 15px;margin-top: 10px;" alt=" "></a>
+        <p>{{article.resume if article.resume else 'No preview.'}}</p>
+        <p style="text-align:right"><span class="ui blue small label">{{article.viewcount}} view{% if article.viewcount!=1 %}s{% endif %}</span><span class="ui blue small label">{{article.commentsnb}} comment{% if article.commentsnb!=1 %}s{% endif %}</span></p>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div id="streamingdivholder" style="display: none;margin-top: 3%;">
+      <div class="custom-header"><i class="video icon"></i>Currently Streaming<span class="mobile-hide" style="float:right; font-size: 14px;">Last updated <span id="streaming_last_update"></span></span></div>
+      <div id="streamingdiv" class="ui segments custom-segments">
+      </div>
+    </div>
+    
+    {% if False %}
+    <div class="ui horizontal divider" style="margin-top:30px">Leaderboards</div>
+    <div class="ui three column stackable grid">
+      <div class="column">
+        Population
+        <div class="ui segments" id="popdailylb" style="font-size:.9em;margin-top:8px">
+        </div>
+      </div>
+      <div class="column">
+        GDP
+        <div class="ui segments" id="gdpdailylb" style="font-size:.9em;margin-top:8px">
+        </div>
+      </div>
+      <div class="column">
+        Commonwealth
+        <div class="ui segments" id="cwdailylb" style="font-size:.9em;margin-top:8px">
+        </div>
+      </div>
+    </div>
+    <div class="ui container right aligned text" style="margin-top:10px">
+      <p><span id="lastupdatelbs" style="font-size:.9em"></span> &#8226; <a class="item" href="{{url_for('lbs.daily_lbs')}}">See more</a></p>
+    </div>
+    {% endif %}
+    
+    
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!--<script type="text/javascript" src="/static/lib/timeago/timeago.js"></script> removed-->
+<script>
+var badges_catalog = {{badges_catalog|tojson}};
+
+function formatTimeagoDates() {
+    var elems_to_change = document.getElementsByName('timeagodate');
+    for (var i=0; elems_to_change.length > i; i++) {
+      var temp_elem = elems_to_change[i];
+      var temp_date = temp_elem.innerHTML.trim();
+      temp_elem.innerHTML = jQuery.timeago(new Date(Number(temp_date)*1000));
+    }
+}
+
+function getLeadsFormatting(leads) {
+    var inhtml = '';
+    for (var i=0; 3>i; i++) {
+        var curr_colony = leads[i];
+        if (curr_colony[4]=='No change') {
+            var cc = '<i class="minus icon grey"></i>';
+        } else {
+            if (curr_colony[4].charAt(0)=='-') {
+                var cc = '<i class="arrow down icon red"></i>';
+            } else {
+                var cc = '<i class="arrow up icon green"></i>';
+            }
+        }
+        inhtml += '<div class="ui segment"><div class="ui grid"><div class="height wide column"><a class="header" href="{{url_for('main.colonies', charter='')}}'+curr_colony[0]+'" target="_blank" style="color:rgba(0,0,0,.87)">'+curr_colony[1]+' ('+curr_colony[2]+')</a></div><div class="height wide right aligned column">'+curr_colony[3]+' '+cc+'</div></div></div>';
+    }
+    return inhtml;
+}
+
+function fetchStreaming() {
+    $.ajax({
+        type: 'GET',
+        url: 'https://mc1.my-colony.com/api.php?pf=5&g=1',
+        dataType: 'json',
+        success: function (data) {
+            if (data.length==0) {
+              document.getElementById('streamingdivholder').style.display = 'none';
+              return;
+            }
+            var inhtml = '';
+            for (var i=0; data.length>i; i++) {
+              inhtml += `
+        <div class="ui segment">
+          <a target="_blank" href="https://mc1.my-colony.com/colonies/`+data[i].charter+`/">`+data[i].colony+`, `+data[i].user+`</a>
+        </div>`;
+            }
+            document.getElementById('streaming_last_update').innerHTML = (new Date()).toLocaleString();
+            document.getElementById('streamingdiv').innerHTML = inhtml;
+            document.getElementById('streamingdivholder').style.display = '';
+            return;
+        }
+    });
+}
+
+$( document ).ready(function() {
+    var playerslist = [];
+    var temp_list = Object.values(char_to_owner);
+    for (var i=0; temp_list.length>i ; i++) {
+        var temp_owner = temp_list[i];
+        if (!playerslist.includes(temp_owner)) {
+          playerslist.push(temp_owner);
+        }
+    }
+    document.getElementById('playersnumber').innerHTML = playerslist.length.toLocaleString();
+    document.getElementById('coloniesnumber').innerHTML = Object.keys(char_to_name).length.toLocaleString();
+    //document.getElementById('popdailylb').innerHTML = getLeadsFormatting(leads_pop);
+    //document.getElementById('gdpdailylb').innerHTML = getLeadsFormatting(leads_gdp);
+    //document.getElementById('cwdailylb').innerHTML = getLeadsFormatting(leads_cw);
+    //document.getElementById('lastupdatelbs').innerHTML = (new Date(leads_last_update)).toLocaleString();
+    //document.getElementById('lastupdatestats').innerHTML = (new Date(leads_last_update)).toLocaleString();
+    
+    formatLocaleString();
+    formatBadges();
+    //formatTimeagoDates();
+    fetchStreaming();
+    setInterval(fetchStreaming, 60000);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,102 @@
+.gbt-trade-posted {
+	color: green;
+}
+.gbt-trade-purchased {
+	color: orange;
+}
+.gbt-trade-image {
+	width: 27px;
+	vertical-align: middle;
+	margin-right: 5%;
+}
+
+.livePriceCard, .gabBTContractItem {
+	position: relative;
+	border-style: solid;
+	border-color: #bbbbbb;
+	border-width: 1px;
+	display: inline-block;
+	margin: 8px;
+	cursor: pointer;
+	background-color: #ffffff;
+	overflow: hidden;
+}
+.livePriceImage {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    height: 40px;
+    width: 40px;
+}
+.livePriceName {
+    font-size: .8em;
+    font-weight: bold;
+    position: absolute;
+    top: 6px;
+    left: 56px;
+}
+.livePricePrice {
+    font-size: .8em;
+    position: absolute;
+    bottom: 6px;
+    left: 56px;
+}
+.livePriceCard {
+    height: 100px;
+    width: 228px;
+    max-width: 90%;
+    border-radius: 5px;
+}
+.livePriceCard:hover {
+	background-color: #e3e3e3;
+}
+.gabBTContractItem {
+	height: 300px;
+	width: 90px;
+}
+.contractHeader, .priceHeader {
+	display: block;
+	font-size: .8em;
+	font-weight: bold;
+	text-align: center;
+	margin: 6px;
+}
+.gabBTContractItemImage {
+	height: 40px;
+	width: 40px;
+	display: block;
+	margin: 4px auto;
+}
+.contractQuantity {
+	border-bottom-style: solid;
+	border-bottom-width: 1px;
+	border-bottom-color: #bbbbbb;
+	padding-bottom: 6px;
+	margin: 6px;
+}
+.contractQuantity, .contractPrice {
+	display: block;
+	font-size: .8em;
+	opacity: .6;
+	text-align: center;
+}
+.hundredPrice {
+	display: block;
+	font-size: .6em;
+	font-weight: bold;
+	text-align: center;
+	margin-bottom: 6px;
+	opacity: .5;
+}
+.offeredBy {
+	display: block;
+	font-size: .6em;
+	text-align: center;
+}
+.offeredByName {
+	text-transform: uppercase;
+	display: block;
+	font-size: .6em;
+	font-weight: bold;
+	text-align: center;
+}

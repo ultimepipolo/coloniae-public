@@ -1,0 +1,18 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Events - Coloniae{% endblock %}
+
+{% block corps %}
+<div class="ui text container fluid">
+    <h1 class="ui center aligned header">Events Hub</h1>
+    
+    <p>Welcome to the Events Hub. This place is meant as a hub for My Colony community events.<br>Anyone may create events and Event Managers are moderating the events hub.</p>
+
+    {% if logged_in %}
+    <a class="ui button" href="{{url_for('events.events_form')}}">Create an event</a>
+    {% endif %}
+
+
+
+</div>
+{% endblock %}

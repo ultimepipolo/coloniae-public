@@ -1,0 +1,337 @@
+{% extends "squelette.html" %}
+
+{% block titre %}The Bomber - Coloniae{% endblock %}
+
+{% block corps %}
+<!-- Articles -->
+<div class="ui main text container">
+    <h1 class="ui center aligned header">The Bomber</h1>
+    
+    <p>The Bomber is a My Colony bot for Discord made by Sobeirannovaocc, linked with Coloniae and with some exclusive features, described below.</p>
+    
+    <h3><b>Installation instructions</b></h3>
+    <p>Follow <a href="https://discordapp.com/oauth2/authorize?client_id=503605205397667860&scope=bot&permissions=0" target="_blank">this link</a>.</p>
+    
+    <h3><b>Suffix</b></h3>
+    <p><code>!</code></p>    
+    
+    <h3><b>The registering feature</b></h3>
+    <p><b>Purpose</b><br>It is possible to link one's Discord account with their Ape Apps account. It allows using the Ape Chat connection in Discord and appear in the main page under "online on discord".</p>
+    <p><b>Usage</b><br>Use <code>!register</code> to register your Ape Apps account. Once registered, it will appear in <code>!me</code> and in your <a href="{{url_for('perso.perso_index')}}" target="_blank">personal panel</a>. A Discord account can only have one Ape Apps account, and one Ape Apps account can only have one Discord account. To unlink the Discord account from the Ape Apps account, go to your <a href="{{url_for('perso.perso_index')}}" target="_blank">personal panel</a> and click "unlink".</p>
+        
+    <h3><b>Ape Chat instructions</b></h3>
+    <p><b>Installation</b><br>All the actions below must be taken by server owners.<br>While in the discord channel you want to link with Ape Chat, use <code>!apechatsub &lt;ape chat channel&gt;</code> (example: <code>!apechatsub my-colony</code>). This subscription is persistent over restarting of the Bomber and you can change the discord channel name as much as you want. Use <code>!apechatlist</code> to list all the subscribed channels of your server. Use <code>!apechatunsub</code> to unsubscribe the current channel. Also note that <b>the bot needs manage messages permission on channels dedicated to Ape Chat</b>.</p>
+    <p><b>Usage</b><br>In order to talk in Ape Chat through Discord, you need to have your ape apps account registered with the Bomber. Use <code>!register</code> for that. Then you can either do <code>!login</code> with your Ape Apps password in the <b>DM channel with the Bomber</b> each time you want to log in (and each time the bot restarts) OR you can save your Ape Apps password using <code>!rememberpass</code> in the <b>DM channel with the Bomber</b>, which will log you in automatically if you're not. The bot sometimes looses connection, so to restart it players with the Bomber Caretaker role can use <code>!apechatrestart</code>.</p>
+    
+    <h3><b>Commands list by category</b></h3>
+    
+    <p>Coloniae</p>
+    <table class="ui celled table">
+      <thead>
+        <tr>
+          <th>Command</th>
+          <th>Parameters</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+         <tr>
+          <td>
+          <code>adu [charter]</code>
+          </td>
+          <td>
+          <code>charter</code> : An online colony charter code.
+          </td>
+          <td>
+          Displays ADU overview for this charter.
+          </td>
+        </tr>
+         <tr>
+          <td>
+          <code>adures [charter] [resource]</code>
+          </td>
+          <td>
+          <code>charter</code> : An online colony charter code.<br>
+          <code>resource</code> : A resource. Must be exact name, spaces allowed, case unsensitive.
+          </td>
+          <td>
+          Displays last known resource amount and storage from ADU for this charter.
+          </td>
+        </tr>
+         <tr>
+          <td>
+          <code>me</code>
+          </td>
+          <td>
+          </td>
+          <td>
+          Displays your profile.
+          </td>
+        </tr>
+         <tr>
+          <td>
+          <code>profile [displayname]</code>
+          </td>
+          <td>
+          <code>displayname</code> : The user's current name on the server, which is the nickname or if they don't have one, the username.
+          </td>
+          <td>
+          Displays an user's profile.
+          </td>
+        </tr>
+         <tr>
+          <td>
+          <code>register [ape apps account]</code>
+          </td>
+          <td>
+          <code>ape apps account</code> : Your Ape Apps account. Only one per user.
+          </td>
+          <td>
+          Registers your Ape Apps account.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    
+    
+    <p>My Colony</p>
+    <table class="ui celled table">
+    <thead>
+      <tr>
+        <th>Command</th>
+        <th>Parameters</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+        <code>changelog [version]</code>
+        </td>
+        <td>
+        <code>version</code> : The My Colony version to see the changelog of.
+        </td>
+        <td>
+        Displays changelog of a version of My Colony.
+        </td>
+      </tr>
+       <tr>
+        <td>
+        <code>charter [charter]</code>
+        </td>
+        <td>
+        <code>charter</code> : An online colony charter code.
+        </td>
+        <td>
+        Displays information for this colony.
+        </td>
+      </tr>
+       <tr>
+        <td>
+        <code>exchange [from] (amount) (to)</code>
+        </td>
+        <td>
+        <code>from</code> : The resource to convert from.<br>
+        <code>amount</code>(optional) : The amount to convert.<br>
+        <code>to</code>(optional) : The resource to convert to.
+        </td>
+        <td>
+        Displays excahnge rates according to GBT rolling prices (3 days average). If <code>amount</code> or <code>to</code> are omitted, displays GBT rolling prices (3 days average).
+        </td>
+      </tr>
+       <tr>
+        <td>
+        <code>colony [name]</code>
+        </td>
+        <td>
+        <code>name</code> : An online colony partial or exact name.
+        </td>
+        <td>
+        Displays information for this colony.
+        </td>
+      </tr>
+       <tr>
+        <td>
+        <code>lb (field)</code>
+        </td>
+        <td>
+        <code>field</code>(optional) : "pop" or "gdp". Default : "pop"
+        </td>
+        <td>
+        Displays leaderboards.
+        </td>
+      </tr>
+       <tr>
+        <td>
+        <code>player [ape apps account]</code>
+        </td>
+        <td>
+        <code>ape apps account</code> : A partial or exact Ape Apps account.
+        </td>
+        <td>
+        Displays information for this player.
+        </td>
+      </tr>
+       <tr>
+        <td>
+        <code>stream</code><br><code>streams</code><br><code>streaming</code>
+        </td>
+        <td>
+        </td>
+        <td>
+        Displays currently streaming colonies.
+        </td>
+      </tr>
+      </tbody>
+    </table>
+    
+    
+    <p>Ape Chat</p> 
+    <table class="ui celled table">
+      <thead>
+        <tr>
+          <th>Command</th>
+          <th>Parameters</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>       
+        <tr>
+          <td>
+          <code>apechatrestart</code>
+          </td>
+          <td>
+          </td>
+          <td>
+          Restarts the Bomber Ape Chat feature. Only allowed to Bomber Caretakers.
+          </td>
+        </tr>
+        <tr>
+          <td>
+          <code>apedm [receipient] [message]</code>
+          </td>
+          <td>
+          <code>receipient</code> : The Ape Apps account of the receipient of your message.<br>
+          <code>message</code> : The message contents to send via DM on Ape Chat to the receipient.
+          </td>
+          <td>
+          Sends a DM on Ape Chat.
+          </td>
+        </tr>
+         <tr>
+          <td>
+          <code>forgetpass</code>
+          </td>
+          <td>
+          </td>
+          <td>
+          Unregisters your Ape Apps password.
+          </td>
+        </tr>
+         <tr>
+          <td>
+          <code>login [ape apps password]</code>
+          </td>
+          <td>
+          <code>ape apps password</code> : The Ape Apps password of your registered Ape Apps account.
+          </td>
+          <td>
+          Connects your Ape Chat session on Discord.
+          </td>
+        </tr>
+         <tr>
+          <td>
+          <code>logout</code>
+          </td>
+          <td>
+          </td>
+          <td>
+          Disconnects your Ape Chat session on Discord.
+          </td>
+        </tr>
+         <tr>
+          <td>
+          <code>mypass</code>
+          </td>
+          <td>
+          </td>
+          <td>
+          Displays your registered Ape Apps password.
+          </td>
+        </tr>
+         <tr>
+          <td>
+          <code>rememberpass [ape apps password]</code>
+          </td>
+          <td>
+          <code>ape apps password</code> : The Ape Apps password of your registered Ape Apps account.
+          </td>
+          <td>
+          Registers your Ape Apps password.
+          </td>
+        </tr>       
+        <tr>
+          <td>
+          <code>apechatsub</code>
+          </td>
+          <td>
+          <code>ape chat channel</code> : An Ape Apps channel.
+          </td>
+          <td>
+          Subscribes the current Discord channel to the Ape Chat channel. Only allowed to server owners.
+          </td>
+        </tr>       
+        <tr>
+          <td>
+          <code>apechatunsub</code>
+          </td>
+          <td>
+          </td>
+          <td>
+          Unsubscribes the current Discord channel. Only allowed to server owners.
+          </td>
+        </tr>       
+        <tr>
+          <td>
+          <code>apechatlist</code>
+          </td>
+          <td>
+          </td>
+          <td>
+          Lists all channels of this server which are subscribed to and Ape Chat channel.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    
+    
+    <p>Other</p>  
+    <table class="ui celled table">
+      <thead>
+        <tr>
+          <th>Command</th>
+          <th>Parameters</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+         <tr>
+          <td>
+          <code>help</code>
+          </td>
+          <td>
+          </td>
+          <td>
+          Redirects to this webpage.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <br>
+
+    
+    <p>The Bomber is currently installed on <b>{{nb_servers}}</b> servers.<br><b>{{nb_registered}}</b> players have their Discord account linked with their Ape Apps account.<br>Last update of this page: <b><span name="date">{{ lastmodif }}</span></b>.</p>
+    
+</div>
+{% endblock %}

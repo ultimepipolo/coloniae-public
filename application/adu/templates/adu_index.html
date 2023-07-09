@@ -1,0 +1,135 @@
+{% extends "squelette.html" %}
+
+{% block titre %}ADU - Coloniae{% endblock %}
+
+{% block corps %}
+<div class="ui text container fluid">
+
+  <h1 class="ui center aligned header">ADU Index</h1>
+  <p>ADU stands for Active Data Uploader. It's a service that allows you keeping track of your stats and see detailed stats about colonies using the ADU.<br>To use the ADU, you have to activate Coloniae Sync in the statistics screen in game.<br>Your colony should appear 2 to 5 minutes after you activated, depending on the fluidity of your game. This is available to online colonies only.</p>
+  <!--<p>Timereference is the amount of years the have passed in game since the foundation of the colony/city or since update .75 (Nov 8 2018) when years and periods have been added to the game. <code>1 year = 60 periods</code> and <code>1 period = 2000/fps seconds</code>, so with 30 fps 1 period is 67 seconds and 1 year is 1h7min. Data is sent to the ADU on every period.<br>Estimated playtime is the amount of time the colony would've been online for if it was running at 30 fps.<br>For old GDP nostalgics, "Value of Reserves" is exactly your old GDP.<br>Net Worth is the old GDP plus the value of buildings.</p>-->
+  <p>This is the index. All colonies using the ADU appear here.</p>
+  <p>Click <a href="{{url_for('stats.adustats')}}">here</a> to access the ADU Leadeboards and Stats.</p>
+
+</div>
+
+<div class="ui container fluid" style="margin-top:3%">  
+  <div class="ui container fluid" style="margin:10px;">
+    <div id="main_table_container">
+      <div class="ui segment" style="height:100px;">
+        <div class="ui active inverted dimmer">
+          <div class="ui text loader">Loading table</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<div class="ui text right aligned container">
+  <p><i>Thanks to Pavlxiiv aka Paul for beta-testing!</i></p>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+var badges_catalog = {{ badges_catalog | tojson }};
+function formatThisName(temp_elem) {
+  var temp_ape_account = temp_elem.trim();
+  if (badges_catalog.hasOwnProperty(temp_ape_account)) {
+    for (var j=0; badges_catalog[temp_ape_account].length > j ; j++) {
+      temp_elem += ' <span  style="font-size:.7rem" class="ui '+badges_catalog[temp_ape_account][j].color+' label">'+badges_catalog[temp_ape_account][j].badgename+'</span>';
+    }
+  }
+  return temp_elem;
+}
+
+$( document ).ready(function() {
+  $.ajax({
+    type: 'GET',
+    url: 'https://cdn.datatables.net/v/se/dt-1.10.20/datatables.min.js',
+    dataType: 'script',
+    cache:true,
+    success: function () {
+      $.ajax({
+      type: 'GET',
+      url: 'https://cdn.datatables.net/v/se/dt-1.10.20/datatables.min.css',
+      cache:true,
+      success: function (dt_css_styles) {
+        document.getElementById('main_table_container').innerHTML = `
+        <style>`+dt_css_styles+`</style>
+        <table id="main_table_div" class="ui striped table compact">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Owner</th>
+              <th>Last active city</th>
+              <th>Last seen</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>Name</th>
+              <th>Owner</th>
+              <th>Last active city</th>
+              <th>Last seen</th>
+            </tr>
+          </tfoot>
+        </table>`;
+        $("#main_table_div").DataTable({
+          searching: true,
+          order: [[3, "desc"]],
+          ajax: {
+            url: "{{url_for('api.adutable')}}",
+          },
+          columns: [
+            { data: "name", orderable: false },
+            { data: "owner", orderable: false  },
+            { data: "lastcity", orderable: false },
+            { data: "lastts",  searchable: false}
+          ],
+          columnDefs: [
+            {
+              targets: [0], // name
+              width: "25%",
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  return '<a target="_blank" href="'+Flask.url_for('adu.adu_view', {'charter':row.charter})+'"">' +data +'</a>';
+                }
+                return data;
+              }
+            },
+            {
+              targets: [1], // owner
+              width: "25%",
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  return '<a target="_blank" href="'+Flask.url_for('main.player', {'username':data})+'"">' +formatThisName(data) +'</a>';
+                }
+                return data;
+              }
+            },
+            {
+              targets: [3], // time
+              width: "25%",
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  return new Date(Number(data) * 1000).toLocaleString();
+                }
+                return data;
+              }
+            }
+          ]
+        });
+      }
+      });
+    }
+  });
+});
+</script>
+{% endblock %}

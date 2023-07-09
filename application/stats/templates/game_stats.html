@@ -1,0 +1,226 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Game Stats - Coloniae{% endblock %}
+
+{% block corps %}
+<div class="ui text container fluid">
+
+  <h1 class="ui center aligned header">Game Statistics</h1>
+
+  <p style="margin-top:3%">Available stats:</p>
+  <ul class="ui list">
+    <li onclick="javascript:makePieChart('maptypes')"><a href="#">Map Types</a></li>
+    <li onclick="javascript:makePieChart('civilizations')"><a href="#">Civilizations</a></li>
+    <li onclick="javascript:makePieChart('platform')"><a href="#">Playing platform</a></li>
+    <li onclick="javascript:makePieChart('platformg')"><a href="#">Playing platform (grouped)</a></li>
+    <li onclick="javascript:makeStackChart('capitol')"><a href="#">Independent colonies</a></li>
+    <li onclick="javascript:makePieChart('regions')"><a href="#">Regions</a></li>
+    <li onclick="javascript:makeLineChart('coloniesnb')"><a href="#">Number of colonies</a></li>
+    <li onclick="javascript:makeLineChart('ownersnb')"><a href="#">Number of players</a></li>
+    <li onclick="javascript:makeLineChart('populationsum')"><a href="#">Population of the universe</a></li>
+    <li onclick="javascript:makeLineChart('populationavg')"><a href="#">Average Popliation</a></li>
+    <li onclick="javascript:makeLineChart('gdpsum')"><a href="#">GDP of the universe</a></li>
+    <li onclick="javascript:makeLineChart('gdpavg')"><a href="#">Average GDP</a></li>
+  </ul>
+
+</div>
+
+<div id="container_main" class="container fluid" style="margin-top: 3%"></div>
+{% endblock %}
+{% block scripts %}
+<script src="https://code.highcharts.com/stock/highstock.js"></script>
+<script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+<script src="https://code.highcharts.com/stock/modules/export-data.js"></script>
+<script type="text/javascript">
+var today = (new Date((new Date()).getTime()-24*3600*1000)).toISOString().slice(0,10); // actually yesterday
+
+function makePieChart(name, ts='') {
+    element_id = 'container_main';
+    if (ts=='') {ts = today}
+    document.getElementById(element_id).innerHTML = '<div class="ui segment"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+    $.getJSON('{{url_for('api.gamestats')}}?command='+name+'&charter='+ts, function (data) {
+        document.getElementById(element_id).innerHTML = '';
+        if (data.hasOwnProperty('error')) {
+            document.getElementById(element_id).innerHTML = '<p style="text-align:center">Error : '+data.error+'</p>';
+            return;
+        }
+        Highcharts.chart(element_id, {
+            chart: {
+                plotBackgroundColor: null,
+                plotBorderWidth: null,
+                plotShadow: false,
+                type: 'pie'
+            },
+            title :{
+                text: null
+            },
+            subtitle :{
+                text: ts
+            },
+            tooltip: {
+                pointFormat: '{series.name}: <b>{point.y}</b>'
+            },
+            plotOptions: {
+                pie: {
+                    allowPointSelect: true,
+                    cursor: 'pointer',
+                    dataLabels: {
+                        enabled: true,
+                        format: '<b>{point.name}</b>: {point.percentage:.1f} %',
+                        style: {
+                            color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                        }
+                    }
+                }
+            },
+            series: [{
+                name: 'Colonies',
+                colorByPoint: true,
+                data: data
+            }]
+        });
+    });
+};
+
+var subtitles = {'populationsum':'The sum of the population of all online colonies.', 'coloniesnb':"Before 2 Jan 2019, only colonies active during the last 30 days were counted. Now it's all colonies and they get deleted from My Colony after 2 months of inactivity.", 'gdpsum':'This is not right. Abnormal values have to be excluded.','gdpavg':'This is not right. Abnormal values have to be excluded.', 'populationavg':'Average population of the colonies.'}
+
+function makeLineChart(name) {
+    element_id = 'container_main';
+    document.getElementById(element_id).innerHTML = '<div class="ui segment"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+    $.getJSON('{{url_for('api.gamestats')}}?command='+name, function (data) {
+        document.getElementById(element_id).innerHTML = '';
+        if (data.hasOwnProperty('error')) {
+            document.getElementById(element_id).innerHTML = '<p style="text-align:center">Error : '+data.error+'</p>';
+            return;
+        }
+        // create the chart
+        $('#'+element_id).highcharts('StockChart', {
+        chart: {
+            zoomType: 'x'
+        },
+    		rangeSelector: {
+    
+            buttons: [{
+                type: 'month',
+                count: 1,
+                text: '1m'
+            }, {
+                type: 'month',
+                count: 6,
+                text: '6m'
+            }, {
+                type: 'year',
+                count: 1,
+                text: '1y'
+            }, {
+                type: 'all',
+                text: 'All'
+            }],
+            selected: 1
+        },
+ 			  xAxis: {
+          type: 'datetime',
+          dateTimeLabelFormats: {
+              second: '%d %B %Y<br/>%H:%M:%S',
+              minute: '%d %B %Y<br/>%H:%M',
+              hour: '%d %B %Y<br/>%H:%M',
+              day: '%d %B %Y',
+              week: '%d %B %Y',
+              month: '%B %Y',
+              year: '%Y'
+    			}
+    		},
+        title: {
+            text: 'Current value: '+data[data.length-1][1].toLocaleString()
+        },
+        subtitle: {
+            text: subtitles[name]
+        },
+        series: [{ id :'series',
+          name: 'Value',
+          data: data}		
+        ]
+      });
+  });
+};
+
+function makeStackChart(name) {
+    element_id = 'container_main';
+    document.getElementById(element_id).innerHTML = '<div class="ui ssegment"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+    $.getJSON('{{url_for('api.gamestats')}}?command='+name, function (data) {
+        document.getElementById(element_id).innerHTML = '';
+        if (data.hasOwnProperty('error')) {
+            document.getElementById(element_id).innerHTML = '<p style="text-align:center">Error : '+data.error+'</p>';
+            return;
+        }
+        // create the chart
+        $('#'+element_id).highcharts('StockChart', {
+        chart: {
+            zoomType: 'x',
+            type: 'area'
+        },
+    		rangeSelector: {
+    
+            buttons: [{
+                type: 'month',
+                count: 1,
+                text: '1m'
+            }, {
+                type: 'month',
+                count: 6,
+                text: '6m'
+            }, {
+                type: 'year',
+                count: 1,
+                text: '1y'
+            }, {
+                type: 'all',
+                text: 'All'
+            }],
+            selected: 1
+        },
+ 			  xAxis: {
+          type: 'datetime',
+          dateTimeLabelFormats: {
+              second: '%d %B %Y<br/>%H:%M:%S',
+              minute: '%d %B %Y<br/>%H:%M',
+              hour: '%d %B %Y<br/>%H:%M',
+              day: '%d %B %Y',
+              week: '%d %B %Y',
+              month: '%B %Y',
+              year: '%Y'
+    			}
+    		},
+        plotOptions: {
+            area: {
+                stacking: 'percent',
+                lineColor: '#ffffff',
+                lineWidth: 1,
+                marker: {
+                    lineWidth: 1,
+                    lineColor: '#ffffff'
+                }
+            }
+        },
+        tooltip: {
+            pointFormat: '<span style="color:{series.color}">{series.name}</span>: <b>{point.percentage:.1f}%</b> ({point.y:,.0f})<br/>',
+            split: true
+        },
+        //title: {
+        //    text: 'Current value: '+data[data.length-1][1].toLocaleString()
+        //},
+        subtitle: {
+            text: subtitles[name]
+        },
+        series: [{ id :'series1',
+          name: 'Yes',
+          data: data['yes']}		,
+          { id :'series2',
+          name: 'No',
+          data: data['no']}	
+        ]
+      });
+  });
+};
+</script>
+{% endblock %}

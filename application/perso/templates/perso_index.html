@@ -1,0 +1,268 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Personal Page - Coloniae{% endblock %}
+
+{% block corps %}
+<!-- Articles -->
+<div class="ui container fluid">
+    <h1 class="ui center aligned header">{{logged_in}}</h1>
+    
+    <div class="ui text container" style="margin-top:3%">
+      <div class="ui grid">
+          <div class="twelve wide column">
+              <p>This is your private panel. Here you can manage your Coloniae account.</p>
+          </div>
+          <div class="right aligned four wide column">
+              <a href="{{url_for('perso.logout')}}">Sign out</a>
+          </div>
+      </div>
+    </div>
+
+    <div class="ui text container"  style="margin-top:3%">
+      {% if discordid == 0 %}
+      <p>Your account is not linked with Discord. To link it, head over to a discord server with the Bomber and use <code>!register</code>.</p>
+      {% else %}
+      <p>Your account is linked with Discord (ID {{discordid}}). <a href="#" onclick="javascript:removediscordlink()">Unlink</a>.</p>
+      {% endif %}
+      
+      {% if roles|length > 0 %}
+      <p>You have the following roles:
+        {% for role in roles %}
+          <span style="font-style:normal;font-size: .7em;padding: .35em" class="ui {{role.color}} label">{{role.name}}</span>
+        {% endfor %}
+      </p>
+      {% else %}
+      <p>You have no roles.</p>
+      {% endif %}
+    </div>
+
+    {% if layouts|length > 0 %}
+    <div class="ui text container" style="margin-top:3%">
+      <p>You have {{layouts|length}} layouts.</p>
+    </div>
+    <div class="ui container fluid">
+      <table class="ui bordered compact table">
+        <thead>
+          <tr><th>Title</th><th>Last update</th><th>Visibility</th><th>Edit</th><th>Download</th><th>Delete</th></tr>
+        </thead>
+        <tbody>
+      {% for item in layouts %}
+          <tr><td><b>{{item.name}}</b></td><td name="date">{{item.lastupdate}}</td><td>{{item.hidden}}</td><td><a href="{{url_for('tools.layouts_tool', lid=item.lid)}}">Edit</a></td><td><a href="#"><span onclick="javascript:download_layout({{item.lid}})">Download</span></a></td><td><a href="#"><span onclick="javascript:ask_del_layout({{item.lid}})">Delete</span></a></td></tr>
+        </tbody>
+      {% endfor %}
+      </table>
+    </div>
+    {% else %}
+    <div class="ui text container" style="margin-top:3%">
+      <p>You have no layouts yet. Go ahead and create one with the <a href="{{url_for('tools.layouts_tool', lid=0)}}">layout tool</a>!</p>
+    </div>
+    {% endif %}
+    
+    {% if articles|length > 0 %}
+    <div class="ui text container" style="margin-top:3%">
+      <p>You have {{articles|length}} articles.</p>
+    </div>
+    <div class="ui container fluid">
+      <table class="ui bordered compact table">
+        <thead>
+          <tr><th>Title</th><th>Creation/Publication</th><th>Last update</th><th>State</th><th>Edit</th></tr>
+        </thead>
+        <tbody>
+      {% for item in articles %}
+          <tr><td><b>{{item.title}}</b></td><td name="date">{{item.created}}</td><td name="date">{{item.lastupdate}}</td><td>{{item.hidden}}</td><td><a href="{{url_for('news.news_tool', nid=item.nid)}}">Edit</a></td></tr>
+      {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+    {% if 'Article Writer' in user_roles %}
+    <div class="ui text container">
+      <p><a href="{{url_for('news.news_tool', nid=0)}}">Start a new article</a></p>
+    </div>
+    {% endif %}
+
+    {% if inactive_colonies|length > 0 %}
+    <div class="ui text container" style="margin-top:3%">
+      <p>You have {{inactive_colonies|length}} inactive colonies.<br><i>You can link colonies below, so that they appear as one in the newest colony page. Only one recipient (linked to) per link. A colony may be linked to and linked from.<br>Warning, this is not meant to add the values as in merging two active colonies into one but rather create continuity with a colony that was deleted from the server and thus can't ever be played again.</i></p>
+    </div>
+    <div class="ui container fluid">
+      <table class="ui bordered compact table">
+        <thead>
+          <tr><th>Name</th><th>Charter</th><th>Removal from server</th><th>Linked to</th><th>Change link</th></tr>
+        </thead>
+        <tbody>
+      {% for item in inactive_colonies %}
+          <tr><td><b>{{item.name}}</b></td><td>{{item.charter}}</td><td name="ddate">{{item.datedeleted}}</td><td>{{item.linkedto.name if item.linkedto else ''}} {{'('+item.linkedto.charter+')' if item.linkedto else ''}}</td><td>
+            <div class="ui dropdown" name="colonies_link_dropdowns">
+              <input type="hidden" id="colonies_link_input_{{item.charter}}">
+              <div class="default text">Choose colony...</div>
+              <i class="dropdown icon"></i>
+              <div class="menu">
+                {% for jtem in active_colonies+inactive_colonies %}
+                  {% if jtem.charter != item.charter %}
+                <div class="item" data-value="{{jtem.charter}}">{{jtem.name}} ({{jtem.charter}})</div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+            <button class="ui tiny button" type="submit" onclick="javascript:update_colony_link(this, '{{item.charter}}')" style="margin-left: 3%">Link to</button><button class="ui tiny button" type="submit" onclick="javascript:update_colony_unlink(this, '{{item.charter}}')" style="margin-left: 3%">Unlink</button>
+          </td></tr>
+        </tbody>
+      {% endfor %}
+      </table>
+    </div>
+    {% else %}
+    <div class="ui text container" style="margin-top:3%">
+      <p>You have no layouts yet. Go ahead and create one with the <a href="{{url_for('tools.layouts_tool', lid=0)}}">layout tool</a>!</p>
+    </div>
+    {% endif %}
+    
+</div>
+<!-- modal deletion confirmation -->
+<div id="confmodal" class="ui modal small">
+  <i class="close icon"></i>
+  <div class="header">Layout deletion confirmation</div>
+  <div class="content">This layout will be <b>permanently</b> deleted from Coloniae. Are you sure?</div>
+  <div class="actions">
+    <div class="ui button" onclick="javascript:delete_layout();">Yes, delete</div>
+    <div class="ui button" onclick="javascript:$('#confmodal').modal('hide');">Cancel</div>
+  </div>
+</div>
+<!-- modal end -->
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+$(document).ready(function(){
+  var drps = document.getElementsByName('colonies_link_dropdowns');
+  $("div[name='colonies_link_dropdowns']").dropdown();
+  return;
+  for (var i = drps.length - 1; i >= 0; i--) {
+    var t_elem = drps[i];
+    t_elem.dropdown('');
+  }
+});
+function submitProfileUpdate(event) {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        alert (this.responseText);
+    };
+    xhttp.open("POST", "https://coloniae.space/p/update", true);
+    xhttp.setRequestHeader("Content-type", "application/json");
+    xhttp.send(JSON.stringify({'event':event, 'data':document.getElementById(event).value})); 
+}
+
+function download_layout(lid) {
+  $.ajax({
+  	type: "GET",
+  	dataType : "json",
+  	url: "{{url_for('tools.layouts_download', lid='')}}"+lid,
+  	success: function(data) {
+      var layout_name = data.layout_name;
+      var layout_contents = data.layout_contents;
+  		$("<a />", {
+  		  "download": layout_name+".mcl",
+  		  "href" : "data:application/json;charset=utf-8," + encodeURIComponent(layout_contents),
+  	  }).appendTo("body").click(function() {
+  		  $(this).remove() 
+  	  })[0].click();
+  	},
+  	error: function(jqXHR, textStatus, errorThrown) {
+  		console.log(jqXHR, textStatus, errorThrown);
+  		alert("Couldn't download layout");
+  		return;
+  	}
+  });
+}
+
+var delete_layout_id = null;
+function ask_del_layout(lid){
+  delete_layout_id = lid;
+  $('#confmodal').modal('show');
+}
+
+function delete_layout() {
+  if (!delete_layout_id) {
+    return;
+  }
+  $.ajax({
+  	type: "GET",
+  	dataType : "json",
+  	url: "{{url_for('tools.layouts_delete', lid='')}}"+delete_layout_id,
+  	success: function(data) {
+      alert(data.outcome);
+  	},
+  	error: function(jqXHR, textStatus, errorThrown) {
+  		console.log(jqXHR, textStatus, errorThrown);
+  		alert("Couldn't delete layout");
+  		return;
+  	}
+  });
+}
+
+function removediscordlink() {
+  $.ajax({
+  	type: "GET",
+  	dataType : "json",
+  	url: "{{url_for('api.removediscordlink')}}",
+  	success: function(data) {
+      alert(data.outcome+'\nClick OK to reload the page');
+      $("<a />", {
+  		  "href" : "{{url_for('perso.perso_index')}}",
+  	  }).appendTo("body").click(function() {
+  		  $(this).remove() 
+  	  })[0].click();
+  	},
+  	error: function(jqXHR, textStatus, errorThrown) {
+  		console.log(jqXHR, textStatus, errorThrown);
+  		alert("Couldn't delete layout");
+  		return;
+  	}
+  });
+}
+
+function update_colony_link(buttonobj, charter) {
+  buttonobj.classList.add('loading');
+  var linkto = document.getElementById('colonies_link_input_'+charter).value;
+  if (linkto=='') {
+    buttonobj.classList.remove('loading');
+    return;
+  }
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      buttonobj.classList.remove('loading');
+      try{
+        data = JSON.parse(this.responseText);
+        alert(data.outcome);
+      } catch (e) {
+        alert(this.responseText);
+      }
+    }
+  };
+  xhttp.open("POST", "{{url_for('api.linkcolonies')}}", true);
+  xhttp.setRequestHeader("Content-type", "application/json");
+  xhttp.send(JSON.stringify({'linkfrom':charter, 'linkto':linkto})); 
+}
+
+function update_colony_unlink(buttonobj, charter) {
+  buttonobj.classList.add('loading');
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      buttonobj.classList.remove('loading');
+      try{
+        data = JSON.parse(this.responseText);
+        alert(data.outcome);
+      } catch (e) {
+        alert(this.responseText);
+      }
+    }
+  };
+  xhttp.open("POST", "{{url_for('api.unlinkcolony')}}", true);
+  xhttp.setRequestHeader("Content-type", "application/json");
+  xhttp.send(JSON.stringify({'linkfrom':charter})); 
+}
+</script>
+{% endblock %}

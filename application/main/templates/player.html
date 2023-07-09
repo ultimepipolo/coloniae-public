@@ -1,0 +1,634 @@
+{% extends "squelette.html" %}
+
+{% block titre %}{{username}} - Coloniae{% endblock %}
+
+{% block corps %}
+<div class="ui container fluid">
+  <h1 class="ui center aligned header" name="badge" style="margin-bottom: 3%;">{{username}}</h1>
+
+  <div class="ui text container">
+    <div class="ui three columns stackable grid">
+      <div class="ui column">
+        <div class="mx-header"><i class="discord icon"></i>Discord</div>
+        <div class="ui segments custom-segments">
+          <div class="ui segment">
+            <p>
+              {% if discordname %}
+              {{discordname}}
+              {% else %}
+              No linked Discord account.
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="ui column">
+        <div class="mx-header"><i class="id badge outline icon"></i>Badges</div>
+        <div class="ui segments custom-segments">
+          <div class="ui segment">
+            <p>
+              {% if roles|length>0 %}
+                {% for role in roles %}
+                <span style="font-size:.7rem" class="ui {{role.color}} label">{{role.name}}</span>
+                {% endfor %}
+              {% else %}
+              No badges
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="ui column">
+        <div class="mx-header"><i class="linkify icon"></i>External Links</div>
+        <div class="ui segments custom-segments">
+          <div class="ui segment">
+            <p>
+              <a href="https://mc1.my-colony.com/users.php?u={{username}}" target="_blank">View on My Colony</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ui container fluid" style="margin-top: 3%;">
+    <div id="main_tab" class="ui top attached tabular stackable menu">
+      <a class="item active" data-tab="infodiv">Colonies List</a>
+      <!--<a class="item" data-tab="medalsdiv" onclick="javascript:load_medalsdiv()">Medals</a>-->
+      <a class="item" data-tab="gbtdiv" onclick="javascript:load_gbtdiv()">Market Contracts</a>
+      <a class="item" data-tab="gbthistdiv" onclick="javascript:load_gbthistdiv()">Market History</a>
+    </div>
+    <div class="ui bottom attached active tab segment" id="infodiv" data-tab="infodiv">
+      <div class="ui container fluid"><br><br><br>
+        <div class="ui active inverted dimmer">
+          <div class="ui text loader">Loading data from server...</div>
+        </div>
+      </div>
+    </div>
+    <!--<div class="ui bottom attached tab segment" id="medalsdiv" data-tab="medalsdiv">
+      <div class="ui container fluid"><br><br><br>
+        <div class="ui active inverted dimmer">
+          <div class="ui text loader">Loading data from server...</div>
+        </div>
+      </div>
+    </div>-->
+    <div class="ui bottom attached tab segment" id="gbtdiv" data-tab="gbtdiv" style="max-height: 1010px;overflow: auto;">
+      <div class="ui container fluid"><br><br><br>
+        <div class="ui active inverted dimmer">
+          <div class="ui text loader">Loading data from server...</div>
+        </div>
+      </div>
+    </div>
+    <div class="ui bottom attached tab segment" id="gbthistdiv" data-tab="gbthistdiv">
+      <div class="ui container fluid"><br><br><br>
+        <div class="ui active inverted dimmer">
+          <div class="ui text loader">Loading data from server...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- styling the gbt like in game -->
+<link rel="stylesheet" href="/static/css/gbt.css">
+<script>
+function load_gbtdiv(){
+  if (document.getElementById('gbtdiv').innerText.trim()!='Loading data from server...') {return;}
+  $.ajax({
+    type: 'GET',
+    url: 'https://mc1.my-colony.com/api.php?pf=4&g=1',
+    dataType: 'json',
+    success: function (data) {
+        document.getElementById('gbtdiv').innerHTML = '';
+        if (!window.catalog) {
+          get_catalog(function(){
+            parseAvgPrices(data, (new Date()), '{{username}}', '{{mycolony_version}}');
+          });
+          return;
+        }
+        parseAvgPrices(data, (new Date()), '{{username}}', '{{mycolony_version}}');
+        return;
+    }
+  });
+}
+
+function load_gbthistdiv(){
+  if (document.getElementById('gbthistdiv').innerText.trim()!='Loading data from server...') {return;}
+  if (!window.catalog && !window.catalogid) {
+    get_catalog(function(){get_catalogid(add_gbthist_tables);});
+    return;
+  }
+  if (!window.catalog) {
+    get_catalog(add_gbthist_tables);
+    return;
+  }
+  if (!window.catalogid) {
+    get_catalogid(add_gbthist_tables);
+    return;
+  }
+  add_gbthist_tables();
+  return;
+}
+
+function add_gbthist_tables(){
+  // get the script only now
+  $.ajax({
+    type: 'GET',
+    url: 'https://cdn.datatables.net/v/se/dt-1.10.20/datatables.min.js',
+    dataType: 'script',
+    cache:true,
+    success: function () {
+      $.ajax({
+      type: 'GET',
+      url: 'https://cdn.datatables.net/v/se/dt-1.10.20/datatables.min.css',
+      cache:true,
+      success: function (dt_css_styles) {
+        document.getElementById('gbthistdiv').innerHTML = `
+        <style>`+dt_css_styles+`</style>
+        <h4>Trades bought</h4>
+        <table id="gbthistdiv_table_bought" class="ui table">
+          <thead>
+            <tr>
+              <th>Colony</th>
+              <th>Got</th>
+              <th>On</th>
+              <th>From</th>
+              <th>In exchange of</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>Colony</th>
+              <th>Got</th>
+              <th>On</th>
+              <th>From</th>
+              <th>In exchange of</th>
+            </tr>
+          </tfoot>
+        </table>
+        <h4>Trades sold</h4>
+        <table id="gbthistdiv_table_sold" class="ui table">
+          <thead>
+            <tr>
+              <th>Colony</th>
+              <th>Got</th>
+              <th>On</th>
+              <th>From</th>
+              <th>In exchange of</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>Colony</th>
+              <th>Got</th>
+              <th>On</th>
+              <th>From</th>
+              <th>In exchange of</th>
+            </tr>
+          </tfoot>
+        </table>`;
+        $("#gbthistdiv_table_bought").DataTable({
+          searching: false,
+          order: [[2, "desc"]],
+          processing: true,
+          serverSide: true,
+          ajax: {
+            url: "{{url_for('api.playertrades', username=username, typee='bought')}}",
+            data: function (data) {
+              return data;
+            }
+          },
+          columns: [
+            { data: "buyer", orderable: false },
+            { data: "got" },
+            { data: "timesold" },
+            { data: "seller", orderable: false },
+            { data: "ieo" }
+          ],
+          columnDefs: [
+            {
+              targets: [0, 3], // charters
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  return '<a target="_blank" href="'+Flask.url_for('main.colonies', {'charter':data})+'"">' +data +'</a>';
+                }
+                return data;
+              }
+            },
+            {
+              targets: [2], // time
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  return new Date(Number(data) * 1000).toLocaleString();
+                }
+                return data;
+              }
+            },
+            {
+              targets: [1], // got
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  if (row.offerflag == 1) {
+                    // got money (bought an offer)
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png" style="margin-right:10px;width: 30px;">' +
+                      Number(data).toLocaleString()
+                    );
+                  }
+                  if (row.offerflag == 0) {
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/'+window.catalog[window.catalogid[row.resourceid]]+'" style="margin-right:10px;width: 30px;">' + Number(data).toLocaleString()
+                    );
+                  }
+                }
+                return data;
+              }
+            },
+            {
+              targets: [4], // in exchange of
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  if (row.offerflag == 0) {
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png" style="margin-right:10px;width: 30px;">' +
+                      Number(data).toLocaleString()
+                    );
+                  }
+                  if (row.offerflag == 1) {
+                    // got money (bought an offer)
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/' +window.catalog[window.catalogid[row.resourceid]] +'" style="margin-right:10px;width: 30px;">' + Number(data).toLocaleString()
+                    );
+                  }
+                }
+                return data;
+              }
+            }
+          ]
+        });
+        $("#gbthistdiv_table_sold").DataTable({
+          searching: false,
+          order: [[2, "desc"]],
+          processing: true,
+          serverSide: true,
+          ajax: {
+            url: "{{url_for('api.playertrades', username=username, typee='sold')}}",
+            data: function (data) {
+              return data;
+            }
+          },
+          columns: [
+            { data: "buyer", orderable: false },
+            { data: "got" },
+            { data: "timesold" },
+            { data: "seller", orderable: false },
+            { data: "ieo" }
+          ],
+          columnDefs: [
+            {
+              targets: [0, 3], // charters
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  return '<a target="_blank" href="'+Flask.url_for('main.colonies', {'charter':data})+'"">' +data +'</a>';
+                }
+                return data;
+              }
+            },
+            {
+              targets: [2], // time
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  return new Date(Number(data) * 1000).toLocaleString();
+                }
+                return data;
+              }
+            },
+            {
+              targets: [1], // got
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  if (row.offerflag == 1) {
+                    // got money (bought an offer)
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png" style="margin-right:10px;width: 30px;">' +
+                      Number(data).toLocaleString()
+                    );
+                  }
+                  if (row.offerflag == 0) {
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/' +window.catalog[window.catalogid[row.resourceid]] +'" style="margin-right:10px;width: 30px;">' +Number(data).toLocaleString()
+                    );
+                  }
+                }
+                return data;
+              }
+            },
+            {
+              targets: [4], // in exchange of
+              render: function (data, type, row, meta) {
+                if (type == "display") {
+                  if (row.offerflag == 0) {
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png" style="margin-right:10px;width: 30px;">' +
+                      Number(data).toLocaleString()
+                    );
+                  }
+                  if (row.offerflag == 1) {
+                    // got money (bought an offer)
+                    return (
+                      '<img class="ui image middle aligned" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/' +window.catalog[window.catalogid[row.resourceid]] +'" style="margin-right:10px;width: 30px;">' +Number(data).toLocaleString()
+                    );
+                  }
+                }
+                return data;
+              }
+            }
+          ]
+        });
+        }
+      });
+    }
+  });
+}
+
+// not implemented
+function load_medalsdiv(){
+  if (document.getElementById('medalsdiv').innerText.trim()!='Loading data from server...') {return;}
+  $.ajax({
+    type: 'GET',
+    url: '{{url_for('api.usermedals', username=username)}}',
+    dataType: 'json',
+    success: function (data) {
+        var inhtml = '';
+        for (i = 0; data.length>i ; i++) {
+        curr_medal = data[i];
+        //parsing
+        inhtml += '<div class="ui card"><div class="image"><img src="'+curr_medal.url+'" alt="Image Loading..."></div><div class="content"><div class="header">'+curr_medal.name+'</div><div class="description">'+curr_medal.message+'</div></div><div class="extra content">Awarded '+(new Date(Number(curr_medal.delivrance)*1000)).toLocaleString()+'</div></div>';
+      }
+        document.getElementById('medalsdiv').innerHTML = '<div class="ui link cards">'+inhtml+'</div>';
+    }
+  });
+}
+
+
+function addColonies(contents, parentDiv) {
+  var millis_epoch = (new Date()).getTime();
+  for (i = 0; contents.length>i ; i++) {
+    var newCard = document.createElement('DIV');
+    newCard.className = 'card';
+    if (contents[i]['cid']==null) {
+        var ss = 'background';
+        var fg = '';
+    } else {
+        var ss = 'screenshots/ss-'+contents[i]['cid'];
+        var fg = '<img class="ui image" src="https://mc1.my-colony.com/screenshots/flag-'+contents[i]['cid']+'.jpg" alt="" onerror="this.style.display=\'none\'" style="height:50px;margin-right: 5px;">';
+    }
+    var millis_las = Number(contents[i]['Last active server'])*1000
+    if (millis_epoch-millis_las > 26*3600*1000) { // if not fetched in the last 26 hours consider server-deleted
+        var server_deleted = '<div class="image-overlay">Server-deleted since '+(new Date(millis_las)).toLocaleDateString()+' ('+timeSince(new Date(millis_las))[0]+')</div>';
+    } else {
+      var server_deleted = '';
+    }
+    if (contents[i]['Last active adu']==null) {
+      var adu_link = '';
+    } else {
+      var t_ret = timeSince(new Date(contents[i]['Last active adu']*1000));
+      var adu_link = '<p><a href="{{url_for('adu.adu_view', charter='')}}'+contents[i]['Charter']+'">View on ADU</a> (<span style="color:'+t_ret[1]+'">'+t_ret[0]+'</span>)</p>';
+    }
+    newCard.innerHTML = '<div class="image"><img class="ui image" style="object-fit:cover;height:200px" src="https://mc1.my-colony.com/'+ss+'.jpg" alt="Image Loading...">'+server_deleted+'</div><div class="content"><div class="header">'+fg+contents[i]['Name']+'</div><div class="description"><p><a href="{{url_for('main.colonies', charter='')}}'+contents[i]['Charter']+'">View History</a></p>'+adu_link+'</div>';
+    parentDiv.appendChild(newCard);
+  }
+}
+
+
+$( document ).ready(function() {
+  // initialize tabs
+  $('#main_tab .item').tab();
+  // fetch stats
+  $.ajax({
+      type: 'GET',
+      url: '{{url_for('api.playerinfo', username=username)}}',
+      dataType: 'json',
+      success: function (datai) {
+          data = datai['infocols']
+          //return;
+          if (data.length == 0) {
+              document.getElementById('infodiv').innerHTML = '<p>Either {{username}} does not exist or they have no colonies registered on the server.</p>';
+          } else {
+              document.getElementById('infodiv').innerHTML = '';
+              var infodivcontents = document.createElement('DIV');
+              infodivcontents.className = 'ui link cards';
+              document.getElementById('infodiv').appendChild(infodivcontents);
+              addColonies(data, infodivcontents);
+          }
+      }
+  });
+});
+
+function get_catalog(callback) {
+  // this is {'resourcename':'image file name'}
+  $.ajax({
+    type: 'GET',
+    url: 'https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/game.js',
+    dataType: 'script',
+    cache:true,
+    success: function () {
+      window.catalog = {};
+      for (var i = window.ColonyGame.resources.length - 1; i >= 0; i--) {
+        var temp_res = window.ColonyGame.resources[i];
+        window.catalog[temp_res.name] = temp_res.icon;
+      }
+      callback();
+    }
+  });
+}
+
+function get_catalogid(callback) {
+  // this is {resourceid:'resource name'}
+  $.ajax({
+    type: 'GET',
+    url: 'https://mc1.my-colony.com/api.php?pf=1&g=1',
+    dataType: 'json',
+    cache:true,
+    success: function (data) {
+      window.catalogid = {};
+      for (var i = data.resources.length - 1; i >= 0; i--) {
+        var temp_res = data.resources[i];
+        window.catalogid[Number(temp_res.id)] = temp_res.name;
+      }
+      callback();
+    }
+  });
+}
+
+function percentagemore(a, b){return (b-a)/a;}
+
+var tml_offset = 0;
+function parseAvgPrices(data, date, puser, gameversion) {
+    tml_offset += 1;
+    var resdict = {}
+    for (var i=0; data.length > i; i++) {
+      if (!resdict.hasOwnProperty(data[i].resource)){resdict[data[i].resource] = []}
+      resdict[data[i].resource].push(data[i]);
+    }
+    //console.log(resdict);
+    var resavgs = {}  // PER 1 NOT PER 100
+    for (i in resdict) {
+      
+      if (!resavgs.hasOwnProperty(i)){resavgs[i] = 0}
+      for (var j=0; resdict[i].length > j; j++) {
+        resavgs[i] += resdict[i][j]['price']/resdict[i][j]['quantity'];
+      }
+      resavgs[i] = resavgs[i]/resdict[i].length;
+    }
+    //console.log(resavgs);
+    var GlobalAvgs = resavgs;
+    var GlobalData = resdict;
+    
+    var expiringsoon = '';
+    var tml = [];
+    // get all charters of the user
+    var charlist = [];
+    for(char in char_to_owner) {
+      if (char_to_owner[char]=='{{username}}'){
+        charlist.push(char);
+      }
+    }
+    for (res in resdict) {
+      for (var j=0; GlobalData[res].length > j; j++) {
+        if (charlist.includes(GlobalData[res][j]['sellercharter'])){
+          tml.push(new Date(GlobalData[res][j]['expires']+'Z'));
+          var good_value = percentagemore(GlobalAvgs[res]*100, (GlobalData[res][j]['price']*100/GlobalData[res][j]['quantity']));
+          if(GlobalData[res][j]['offerflag']=='1'){
+            if(good_value>0.2){ // good trade for an offer
+              temp_color = 'green';
+            } else if (good_value<-0.2) {
+              temp_color = 'red';
+            } else {
+              temp_color='#212529';
+            }
+              
+            expiringsoon += '<div class="gabBTContractItem" onclick="window.open("'+Flask.url_for("main.colonies", {"charter":GlobalData[res][j]['sellercharter']})+'", \'_blank\')"><span id="tml'+(tml.length-1+100*tml_offset)+'" class="contractQuantity">Expires in</span><span class="contractHeader">YOU GET</span><img class="gabBTContractItemImage" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png"><span class="contractQuantity">'+Number(GlobalData[res][j]['price']).toLocaleString()+'</span><span class="priceHeader">YOU PAY</span><img class="gabBTContractItemImage" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/'+catalog[res]+'"><span class="contractPrice">'+Number(GlobalData[res][j]['quantity']).toLocaleString()+'</span><span class="hundredPrice" style="color:'+temp_color+'">'+(GlobalData[res][j]['price']*100/GlobalData[res][j]['quantity']).toLocaleString()+' per 100</span><span class="offeredBy">Offered By</span><span class="offeredByName">'+GlobalData[res][j]['seller']+'</span></div>';
+          } else {
+            if (good_value<-0.2) { // good trade for a sell
+              temp_color = 'green';
+            } else if (good_value>0.2) {
+              temp_color = 'red';
+            } else {
+              temp_color='#212529';
+            }
+            
+            expiringsoon += '<div class="gabBTContractItem" onclick="window.open(\''+Flask.url_for("main.colonies", {"charter":GlobalData[res][j]['sellercharter']})+'\', \'_blank\')"><span id="tml'+(tml.length-1+100*tml_offset)+'" class="contractQuantity">Expires in</span><span class="contractHeader">YOU GET</span><img class="gabBTContractItemImage" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/'+catalog[res]+'"><span class="contractQuantity">'+Number(GlobalData[res][j]['quantity']).toLocaleString()+'</span><span class="priceHeader">YOU PAY</span><img class="gabBTContractItemImage" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/images/ind-coin.png"><span class="contractPrice">'+Number(GlobalData[res][j]['price']).toLocaleString()+'</span><span class="hundredPrice" style="color:'+temp_color+'">'+(GlobalData[res][j]['price']*100/GlobalData[res][j]['quantity']).toLocaleString()+' per 100</span><span class="offeredBy">Offered By</span><span class="offeredByName">'+GlobalData[res][j]['seller']+'</span></div>';
+          }
+        }
+      }
+    }
+    if (expiringsoon=='') {
+      expiringsoon = '{{username}} has no ongoing contract.';
+    } else {
+      expiringsoon = '<p>{{username}} has '+tml.length+' ongoing contracts.</p>'+expiringsoon;
+    }
+    document.getElementById('gbtdiv').innerHTML = expiringsoon;
+    for (var j=0; tml.length > j; j++) {
+      initializeClock('tml'+(j+100*tml_offset), tml[j]);
+    }
+}
+
+function nFormatter(num, digits) {
+  var si = [
+    { value: 1, symbol: "" },
+    { value: 1E3, symbol: " k" },
+    { value: 1E6, symbol: " M" },
+    { value: 1E9, symbol: " B" },
+    { value: 1E12, symbol: " T" },
+    { value: 1E15, symbol: " Q" },
+    { value: 1E18, symbol: " E" }
+  ];
+  var rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
+  var i;
+  for (i = si.length - 1; i > 0; i--) {
+    if (num >= si[i].value) {
+      break;
+    }
+  }
+  return (num / si[i].value).toFixed(digits).replace(rx, "$1") + si[i].symbol;
+}
+
+function timeSince(date) {
+
+  var utcdate = new Date().getTime();
+  var date = date.getTime();
+  var seconds = Math.floor((utcdate - date) / 1000);
+  
+  if (604800>seconds) {
+      var color = 'green';
+  } else if (1296000>seconds && seconds>=604800) {
+      var color = 'orange';
+  } else if (2592000>seconds && seconds>=1296000) {
+      var color = 'orange';
+  } else {
+      var color = 'red';
+  }
+
+
+  var interval = Math.floor(seconds / 31536000);
+
+  if (interval > 1) {
+    return [interval + " years",color];
+  }
+  interval = Math.floor(seconds / 2592000);
+  if (interval > 1) {
+    return [interval + " months",color];
+  }
+  interval = Math.floor(seconds / 86400);
+  if (interval > 1) {
+    return [interval + " days",color];
+  }
+  interval = Math.floor(seconds / 3600);
+  if (interval > 1) {
+    return [interval + " hours",color];
+  }
+  interval = Math.floor(seconds / 60);
+  if (interval > 1) {
+    return [interval + " minutes",color];
+  }
+  return [Math.floor(seconds) + " seconds",color];
+}
+
+//https://www.sitepoint.com/build-javascript-countdown-timer-no-dependencies/
+function getTimeRemaining(endtime){
+  var t = Date.parse(endtime) - Date.parse(new Date());
+  var seconds = Math.floor( (t/1000) % 60 );
+  var minutes = Math.floor( (t/1000/60) % 60 );
+  var hours = Math.floor( (t/(1000*60*60))  );
+  return {
+    'total': t,
+    'hours': hours,
+    'minutes': minutes,
+    'seconds': seconds
+  };
+}
+function initializeClock(id, endtime){
+  var clock = document.getElementById(id);
+    var t = getTimeRemaining(endtime);
+	if (t.hours<=9) {t.hours='0'+t.hours}
+	if (t.minutes<=9) {t.minutes='0'+t.minutes}
+	if (t.seconds<=9) {t.seconds='0'+t.seconds}
+  clock.innerHTML = (t.hours) + ':' + t.minutes +':' + t.seconds;
+  var timeinterval = setInterval(function(){
+    var t = getTimeRemaining(endtime);
+  if (t.total<0) {clock.innerHTML = 'Expired!'}
+	if (t.hours<=9) {t.hours='0'+t.hours}
+	if (t.minutes<=9) {t.minutes='0'+t.minutes}
+	if (t.seconds<=9) {t.seconds='0'+t.seconds}
+    clock.innerHTML = (t.hours) + ':' + t.minutes +':' + t.seconds;
+  },1000);
+}
+</script>
+{% endblock %}

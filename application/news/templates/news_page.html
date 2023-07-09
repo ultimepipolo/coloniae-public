@@ -1,0 +1,37 @@
+{% extends "squelette.html" %}
+
+{% block titre %}{{pagetitle}} - Coloniae{% endblock %}
+
+{% block corps %}
+<!-- Articles -->
+<div class="ui text container fluid">
+    <h1 class="ui center aligned header">{{pagetitle}}</h1>
+    {% if articles|length > 0 %}
+    <div class="custom-header"><i class="newspaper outline icon"></i>Coloniae News</div>
+    <div class="ui segments custom-segments">
+      {% for article in articles %}
+      <div class="ui segment">
+        <div class="ui stackable grid">
+          <div class="height wide column">
+            <h3 class="ui header"><a href="{{url_for('news.news_view', nid=article.nid)}}">{{article.title}}</a></h3>
+          </div>
+          <div class="height wide column right aligned text">
+            <h4><i style="font-size:.85em">{{article.ape_account}}, <span name="date">{{article.created}}</span></i></h4>
+          </div>
+        </div>
+        <a href="{{url_for('news.news_view', nid=article.nid)}}"><img class="ui image" src="/static/media/uploads/article_banner_{{article.nid}}.jpg" style="margin-bottom: 15px;margin-top: 10px;" alt=" "></a>
+        <p>{{article.resume if article.resume else 'No preview.'}}</p>
+        <p style="text-align:right"><span class="ui blue small label">{{article.viewcount}} view{% if article.viewcount!=1 %}s{% endif %}</span><span class="ui blue small label">{{article.commentsnb}} comment{% if article.commentsnb!=1 %}s{% endif %}</span></p>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="ui basic center aligned segment">
+      <div class="ui pagination menu">
+        {% if pagenb>1 %}<a class="item" href="{{url_for('news.news_page', pnb=pagenb-1)}}">&#8592; Previous page</a>{% endif %}
+        <a class="active item" href="{{url_for('news.news_page', pnb=pagenb)}}">{{pagenb}}</a>
+        <a class="item" href="{{url_for('news.news_page', pnb=pagenb+1)}}">Next page &#8594;</a>
+      </div>
+    </div>
+</div>
+{% endblock %}

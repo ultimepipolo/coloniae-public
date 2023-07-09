@@ -1,0 +1,206 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Layout Index - Coloniae{% endblock %}
+
+{% block corps %}
+<div class="ui container fluid">
+    <h1 class="ui center aligned header">Layouts Index</h1>
+    
+    <div class="ui text container">
+      <p>A layout (also called template in the game) is an organization of the buildings of a colony in a certain way. They can serve the purpose of being the most compact and effective for one or multiple resources production, but they can also be made for good looking colonies. There is the posibility of exporting and importing layouts in the game (.mcl files), but it's mainly a premium feature as it is possible only with regions.</p>
+      
+      <p>Here is a list of all public layouts made by the community. You can edit an existing layout by clicking "Edit" in the layout preview. "Download" will download the .mcl file needed to import the template in the game (Statistics -> Overview -> Import template).</p>
+      
+      <p>Currently displaying {{layouts_list|length}} layouts.</p>
+      
+      <a href="{{url_for('tools.layouts_tool', lid=0)}}" class="ui button" role="button">Create a new layout</a>
+      <a href="{{url_for('perso.perso_index')}}" class="ui button" role="button">My Layouts</a>
+    </div>
+    
+    <div class="ui stackable grid" style="margin-top: 10px">
+      <div class="eight wide column">
+        <div class="ui labeled fluid input">
+          <div class="ui label">Filter by name</div>
+          <input type="text" id="filter_name" class="form-control">
+        </div>
+      </div>
+      <div class="eight wide column">
+        <div class="ui labeled fluid input">
+          <div class="ui label">Filter by author</div>
+          <input type="text" id="filter_author" class="form-control">
+        </div>
+      </div>
+    </div>
+    
+    <div id="tabs_list" class="ui styled fluid accordion" style="margin-top:20px">
+      {% for item in layouts_list %}
+      <div class="custom-title title" name="tabtitle-{{item.lid}}">
+        <div class="ui stackable grid">
+          <div class="two wide column">
+            <i onclick="javascript:download_layout({{item.lid}})" class="download link icon"></i>
+            <i onclick="javascript:edit_layout({{item.lid}})" class="edit link icon"></i>
+            <i onclick="javascript:view_layout({{item.lid}})" class="eye link icon"></i>
+          </div>
+          <div class="six wide column" data-ln="{{item.name}}"><a href="javascript:loadTab({{item.lid}})">{{item.name}}</a></div>
+          <div class="five wide column" data-la="{{item.author}}" name="badge">{{item.author}}</div>
+          <div class="three wide column" name="date">{{item.date}}</div>
+        </div>
+      </div>
+      <div class="content" name="tabcontents-{{item.lid}}">
+        <div class="transition hidden">
+          <div class="ui basic segment" style="min-height:200px" name="lctns-{{item.lid}}">
+            <div class="ui active inverted dimmer">
+              <div class="ui text loader">Loading data from server...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    
+    
+    
+    
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+var badges_catalog = {{ badges_catalog | tojson }};
+$( document ).ready(function() {
+  $('#tabs_list')
+    .accordion({
+      selector    : {
+        accordion : '#tabs_list',
+        title     : '.title',
+        trigger   : 'div >a',
+        content   : '.content'
+      }
+    })
+  ;
+  formatBadges();
+  $('#filter_author').on('input',function(e){
+      reload_list(document.getElementById('filter_name').value, document.getElementById('filter_author').value);
+  });
+
+  $('#filter_name').on('input',function(e){
+      reload_list(document.getElementById('filter_name').value, document.getElementById('filter_author').value);
+  });
+});
+
+
+function reload_list(flname, flauthor) {
+  var tabs_list = document.getElementById('tabs_list').children;
+  for (i=0; tabs_list.length>i; i+=2) {
+    var temp_elem = tabs_list[i];
+    var temp_elem_contents = tabs_list[i+1];
+    var temp_name = temp_elem.querySelectorAll('[data-ln]')[0].getAttribute('data-ln');
+    var temp_author = temp_elem.querySelectorAll('[data-la]')[0].getAttribute('data-la');
+    if (temp_name.toLowerCase().includes(flname.toLowerCase()) && temp_author.toLowerCase().includes(flauthor.toLowerCase())) { // it has to be shown to the search
+      temp_elem.style.display = "";
+      temp_elem_contents.style.display = "";
+    } else { // it has to be hidden
+      temp_elem.style.display = "none";
+      temp_elem_contents.style.display = "none";
+    }
+  }
+}
+
+function loadTab(lid) {  
+  if (document.getElementsByName('lctns-'+String(lid))[0].innerText!='Loading data from server...') {return;}
+  $.ajax({
+		type: "GET",
+		dataType : "json",
+		url: "{{url_for('api.layoutpreview', lid='')}}"+lid,
+		success: function(data) {
+			  if (data.outcome!='success') {
+           alert(data.message);
+           return;
+        }
+        var specs_inner = '<div class="ui stackable grid"><div class="eight wide column"><p>Main production (per min, 30t/s):</p><table class="ui compact table">';
+        for (res in data.specs.Production) {
+          specs_inner += '<tr><td><b>'+res+'</b></td><td>'+data.specs.Production[res].toLocaleString()+'</td></tr>';
+        }
+        specs_inner += '</table></div><div class="eight wide column"><p>Facilities :</p><table class="ui compact table">';
+        for (res in data.specs.Stats) {
+          specs_inner += '<tr><td><b>'+res+'</b></td><td>'+data.specs.Stats[res].toLocaleString()+'</td></tr>';
+        }
+        specs_inner += '</table></div></div>';
+        if (data.imageurl!=null) {
+          var imgsrc = data.imageurl;
+        } else {
+          var imgsrc = "";
+        }
+        document.getElementsByName('lctns-'+String(lid))[0].innerHTML = '<p>'+data.description+'</p><div class="ui stackable grid"><div class="height wide column">'+specs_inner+'</div><div class="height wide column"><img class="ui image" style="max-height:350px" src="'+imgsrc+'"></div></div>';
+		},
+		error: function(jqXHR, textStatus, errorThrown) {
+			console.log(jqXHR, textStatus, errorThrown);
+			alert("Couldn't load layout preview");
+			return;
+		}
+	});
+} 
+
+function edit_layout(lid) {
+  if (lid==0) {return;}
+  var logged_in = {{logged_in | tojson}};
+  if (!logged_in) {
+    alert('Editing requires authentication! Please log in, refresh and try again.');
+    return;
+  }
+  var data_to_send = {};
+	var xhttp = new XMLHttpRequest();
+	xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			data = JSON.parse(this.responseText);
+			if (data.outcome!='success') {
+        alert(data.message);
+        return;
+      }
+      $("<a />", {
+  		  "href" : "{{url_for('tools.layouts_tool', lid='')}}" + data.new_lid,
+  	  }).appendTo("body").click(function() {
+  		  $(this).remove() 
+  	  })[0].click();
+		}
+	};
+	xhttp.open("POST", "{{url_for('tools.layouts_copy', lid='')}}"+lid, true);
+	xhttp.setRequestHeader("Content-type", "application/json");
+	xhttp.send(JSON.stringify(data_to_send));
+}
+
+function view_layout(lid) {
+  if (lid==0) {return;}
+  $("<a />", {
+	  "href" : "{{url_for('tools.layouts_tool', lid='')}}" + lid,
+  }).appendTo("body").click(function() {
+	  $(this).remove() 
+  })[0].click();
+}
+
+function download_layout(lid) {
+  if (lid==0) {return;}
+  $.ajax({
+  	type: "GET",
+  	dataType : "json",
+  	url: "{{url_for('tools.layouts_download', lid='')}}"+lid,
+  	success: function(data) {
+      var layout_name = data.layout_name;
+      var layout_contents = data.layout_contents;
+  		$("<a />", {
+  		  "download": layout_name+".mcl",
+  		  "href" : "data:application/json;charset=utf-8," + encodeURIComponent(layout_contents),
+  	  }).appendTo("body").click(function() {
+  		  $(this).remove() 
+  	  })[0].click();
+  	},
+  	error: function(jqXHR, textStatus, errorThrown) {
+  		console.log(jqXHR, textStatus, errorThrown);
+  		alert("Couldn't download layout");
+  		return;
+  	}
+  });
+}
+</script>
+{% endblock %}

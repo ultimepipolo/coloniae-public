@@ -1,0 +1,73 @@
+{% extends "squelette.html" %}
+
+{% block titre %}{{article.title}} - Coloniae{% endblock %}
+
+{% block corps %}
+<!-- Articles -->
+<div class="ui text container fluid">
+    <h1 class="ui center aligned header">{{article.title}}</h1>
+    <p style="margin-top: 3%"><i style="font-size:.85em">Posted by {{article.ape_account}} on <span name="date">{{article.created}}</span></i></p>
+    <p><i style="font-size:.85em">Last update <span name="date">{{article.lastupdate}}</span></i></p>
+    <div style="margin-top: 3%">{{article.contents|safe}}</div>
+    <div class="ui divider"></div>
+    <div class="ui right aligned text container fluid">
+      <span class="ui blue label">{{article.viewcount}} view{% if article.viewcount!=1 %}s{% endif %}</span><span class="ui blue label">{{article.commentsnb}} comment{% if article.commentsnb!=1 %}s{% endif %}</span>
+    </div>
+    <div class="ui feed">
+    {% for comment in article_comments %}
+      <div class="event">
+        <div class="label">
+          <img src="https://accounts.ape-apps.com/getavatar.php?u={{comment.ape_account}}" alt="">
+        </div>
+        <div class="content">
+          <div class="summary">
+            {{comment.ape_account}}
+            <div class="date" name="date">{{comment.created}}</div>
+          </div>
+          <div class="extra text">
+            {{comment.contents}}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+    </div>
+    {% if logged_in %}
+    <div class="ui form">
+      <div class="field">
+        <label>Comment below as {{logged_in}}</label>
+        <textarea class="form-control" rows="3" id="comment_text"></textarea>
+      </div>
+      <button class="ui button" onclick="post_comment()">Post comment</button>
+    </div>
+    {% else %}
+    <div class="ui text container fluid">
+      <p><a href="#" onclick="javascript:$('#modal_login').modal('show');$('#login_embed').embed('show');document.getElementById('login_embed').children[0].children[0].scrolling='yes';">Sign in</a> to post a comment.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- commentaries -->
+<script>
+  function post_comment() {
+    var article_id = {{article.id}};
+    var comment_contents = document.getElementById('comment_text').value;
+    if (comment_contents=='') {return;}
+    data_to_send = {
+      'article_id' : article_id,
+      'commentcontents': comment_contents
+    }
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        data = JSON.parse(this.responseText);
+        alert(data.outcome);
+      }
+    };
+    xhttp.open("POST", "{{url_for('news.news_comment', nid='')}}"+article_id, true);
+    xhttp.setRequestHeader("Content-type", "application/json");
+    xhttp.send(JSON.stringify(data_to_send));
+  }
+</script>
+{% endblock %}

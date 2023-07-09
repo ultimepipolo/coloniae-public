@@ -1,0 +1,112 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Event submition - Coloniae{% endblock %}
+
+{% block corps %}
+<div class="ui text container fluid">
+    <h1 class="ui center aligned header">Event submition</h1>
+    
+    <p>Here you can create an event, then wait for an Event Manager to approve it and make it public.</p>
+
+    
+	<form class="ui form">
+		<h4 class="ui dividing header">Event Series</h4>
+		<div class="field">
+		  	{% if current_titles|length>0 %}
+		  	<div class="inline fields">
+			    <div class="field">
+			      <div class="ui radio checkbox">
+			        <input type="radio" name="continue-title" checked="" tabindex="0" class="hidden" onchange="javascript:radioChange(this, 'new');">
+			        <label>Create a new title</label>
+			      </div>
+			    </div>
+			    <div class="field">
+			      <div class="ui radio checkbox">
+			        <input type="radio" name="continue-title" tabindex="0" class="hidden" onchange="javascript:radioChange(this, 'continue');">
+			        <label>Continue an exisitng title</label>
+			      </div>
+			    </div>
+			    <div class="field">
+				    <div class="ui selection dropdown">
+						<input type="hidden" name="existing_title">
+						<i class="dropdown icon"></i>
+						<div class="default text">Gender</div>
+						<div class="menu">
+							{% for title in current_titles %}
+							<div class="item" data-value="{{title.edition+1}}">{{title.series_title}}</div>
+							{% endfor %}
+						</div>
+					</div>
+				</div>
+			</div>
+		  	<label>Title</label>
+			<div class="field">
+				<input type="text" name="title" placeholder="Series title">
+			</div>
+			{% else %}
+			<div class="field">
+				<input type="text" name="title" placeholder="Series title">
+			</div>
+			{% endif %}
+			<div class="disabled field">
+			  <label>Cheif Organizer</label>
+			  <input type="text" value="{{logged_in}}">
+			</div>
+		</div>
+		<div class="field">
+		  <label>Edition</label>
+		  <input type="text" name="edition" placeholder="1">
+		</div>
+		<h4 class="ui dividing header">Event Information</h4>
+		<div class="field">
+		  <label>Short Description</label>
+		  <textarea></textarea>
+		</div>
+		<div class="field">
+		  <label>Detailed Rules</label>
+		  <textarea></textarea>
+		</div>
+		<div class="field">
+		  <label>Requirements for participating</label>
+		  <textarea></textarea>
+		</div>
+		<h4 class="ui dividing header">Event Dates</h4>
+		<div class="field">
+		  <label>End of registration</label>
+		  <textarea></textarea>
+		</div>
+		<div class="field">
+		  <label>Start of event</label>
+		  <textarea></textarea>
+		</div>
+		<div class="field">
+		  <label>End of event</label>
+		  <textarea></textarea>
+		</div>
+		<div class="ui button" tabindex="0">Submit Event</div>
+	</form>
+
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="text/javascript">
+function radioChange(elem, todo){
+	if (elem.checked) {
+		console.log('have to do '+todo);
+		if (todo=='new'){
+			document.getElementById('title_select').classList.add('disabled');
+			console.log(document.getElementsByName('existing_title'));
+		} else if (todo=='continue') {
+			document.getElementById('title_select').classList.remove('disabled');
+
+		}
+	}
+}
+$(document).ready(function(){
+	$('.ui.radio.checkbox').checkbox();
+	$('.ui.dropdown').dropdown();
+});
+</script>
+{% endblock %}

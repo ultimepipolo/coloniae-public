@@ -1,0 +1,299 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Translation Tool - Coloniae{% endblock %}
+
+{% block corps %}
+<div class="ui text container fluid">
+
+  <h1 class="ui center aligned header">Translation Tool - Editing</h1>
+  <p>Welcome to the translation tool.</p>
+  <p>You are a {% if role==1 %}translator{% elif role==2 %}proofreader{% else %}unknown{% endif %} for the language {{language}}.</p>
+  <div class="ui teal progress" id="progress_bar">
+	<div class="bar">
+	  <div class="progress"></div>
+	</div>
+	<div class="label">Progress: ??</div>
+  </div>
+  <p>
+	<i class="red language icon"></i> not translated
+	<br><i class="yellow language icon"></i> translated by someone else
+	<br><i class="green language icon"></i> translated by you
+	<br><i class="green product hunt icon"></i> proofreading done
+  </p>
+
+</div>
+
+<div class="ui container fluid" style="margin-top:3%">  
+  <div class="ui container fluid" style="margin:10px;">
+	<div id="working_table_div">
+	  <div class="ui segment" style="height:100px;">
+		<div class="ui active inverted dimmer">
+		  <div class="ui text loader">Loading table</div>
+		</div>
+	  </div>
+	</div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function add_working_table(){
+  // get the script only now
+  $.ajax({
+	type: 'GET',
+	url: 'https://cdn.datatables.net/v/se/dt-1.10.20/datatables.min.js',
+	dataType: 'script',
+	cache:true,
+	success: function () {
+	  $.ajax({
+	  type: 'GET',
+	  url: 'https://cdn.datatables.net/v/se/dt-1.10.20/datatables.min.css',
+	  cache:true,
+	  success: function (dt_css_styles) {
+		document.getElementById('working_table_div').innerHTML = `
+		<style>`+dt_css_styles+`</style>
+		<table id="working_table" class="ui compact table">
+		  <thead>
+			<tr>
+			  <th>ID</th>
+			  <th>Original String</th>
+			  <th>Translated String</th>
+			  <th>Comments</th>
+			  <th>Status</th>
+			</tr>
+		  </thead>
+		  <tbody>
+		  </tbody>
+		  <tfoot>
+			<tr>
+			  <th>ID</th>
+			  <th>Original String</th>
+			  <th>Translated String</th>
+			  <th>Comments</th>
+			  <th>Status</th>
+			</tr>
+		  </tfoot>
+		</table>`;
+		$("#working_table").DataTable({
+		  searching: false,
+		  order: [[0, "asc"]],
+		  processing: true,
+		  serverSide: true,
+		  pagingType: "full_numbers",
+		  lengthMenu: [[5, 10, 15], [5, 10, 15]],
+		  ajax: {
+			url: "{{url_for('api.translationstrings')}}",
+			data: function (data) {
+			  return data;
+			}
+		  },
+		  columns: [
+			{ data: "string_id" , orderable: false},
+			{ data: "string_original" , orderable: false},
+			{ data: "string_translated", orderable: false },
+			{ data: "string_comments" , orderable: false},
+			{ data: null , orderable: false}
+		  ],
+		  columnDefs: [
+			{
+			  targets: [2], // string_translated
+			  render: function (data, type, row, meta) {
+				if (type == "display") {
+				  let textarea_contents = '';
+				  for (var i = data.length - 1; i >= 0; i--) {
+					let translator = row.translator_ape_account[i];
+					if (translator == "{{logged_in}}") {
+					  textarea_contents = data[i];
+					}
+				  }
+				  let ht = `
+  <div class="ui form">
+	<div class="field">
+	  <textarea id="translation_`+row.string_id+`" rows=1 style="width:80%">`+textarea_contents+`</textarea>
+	</div>
+  </div>
+  <p>`;
+				  for (var i = data.length - 1; i >= 0; i--) {
+					let translator = row.translator_ape_account[i];
+					if (translator == "{{logged_in}}") {
+					  continue;
+					}
+					let translation = data[i];
+					if (translation  && translator ) {
+					  ht += '<br>'+translator+' : '+translation;
+					}
+				  }
+				  ht += '</p>';
+				  return ht;
+				}
+				return data;
+			  }
+			},
+			{
+			  targets: [3], // comments
+			  render: function (data, type, row, meta) {
+				if (type == "display") {
+				  let textarea_contents = '';
+				  for (var i = data.length - 1; i >= 0; i--) {
+					let translator = row.translator_ape_account[i];
+					if (translator == "{{logged_in}}") {
+					  textarea_contents = data[i];
+					}
+				  }
+				  let ht = `
+  <div class="ui form">
+	<div class="field">
+	  <textarea id="comment_`+row.string_id+`" rows=1 style="width:80%">`+textarea_contents+`</textarea>
+	</div>
+  </div>
+  <p>`;
+				  for (var i = data.length - 1; i >= 0; i--) {
+					let translator = row.translator_ape_account[i];
+					if (translator == "{{logged_in}}") {
+					  continue;
+					}
+					let comment = data[i];
+					if (comment && translator) {
+					  ht += '<br>'+translator+' : '+comment;
+					}
+				  }
+				  ht += '</p>';
+				  return ht;
+				}
+				return data;
+			  }
+			},
+			{
+			  targets: [4], // status
+			  render: function (data, type, row, meta) {
+				if (type == "display") {
+				  // frist, check if translated
+				  let t_icon = '<div class="ui icon header center aligned" style="margin-bottom: 0px;">';
+				  let t_resp = '';
+				  if (row.translator_ape_account[0] == null) {
+					t_icon += '<i class="red language icon" style="margin-bottom: 0;"></i>';
+				  } else {
+					// check if it is proofread
+					if (row.proofreader_ape_account) {
+						let user_accepted = '';
+						for (var i = row.translation_id.length - 1; i >= 0; i--) {
+							if (row.translation_id[i] == row.translation_id_chosen) {
+								user_accepted = row.translator_ape_account[i];
+							}
+						}
+					  t_icon += '<div data-tooltip="'+row.proofreader_ape_account+' accepted '+user_accepted+'\'s" data-position="bottom center"><i class="green product hunt icon"></i></div>';
+					} else {
+					  let t_li = row.translator_ape_account;
+					  if (t_li.length==1) {
+						t_resp = t_li[0];
+					  } else {
+						t_resp = t_li[0];
+						for (let i = 1; t_li.length-1 > i ; i++) { //do not take the last and the first
+						  t_resp += ', '+t_li[i];
+						}
+						t_resp += ' and '+t_li[t_li.length-1];
+					  }
+					  if (t_li.includes("{{logged_in}}")) {
+						t_icon += '<div data-tooltip="'+t_resp+'" data-position="bottom center"><i class="green language icon" style="margin-bottom: 0;"></i></div>';
+					  } else {
+						t_icon += '<div data-tooltip="'+t_resp+'" data-position="bottom center"><i class="yellow language icon" style="margin-bottom: 0;"></i></div>';
+					  }
+					}
+				  }
+				  t_icon += '</div>';
+				  return t_icon+'<p class="center aligned"><button class="ui tiny button" onclick="javascript:send_changes_trs(this, '+row.string_id+')"><i class="paper plane icon"></i>Send changes</button></p>';
+				}
+				return data;
+			  }
+			}
+		  ]
+		});
+		}
+	  });
+	}
+  });
+}
+
+$( document ).ready(function() {
+  add_working_table();
+  reload_progress();
+});
+
+function reload_progress() {
+	$.ajax({
+	url: Flask.url_for('api.trsprogress'),
+	type: "GET", //send it through get method
+	dataType: 'json',
+	contentType: "application/json; charset=utf-8",
+	success: function(response) {
+		$('#progress_bar').progress({
+			value: response.done,
+			total: response.total,
+			text: {
+				active  : 'Translation: {value} strings out of {total}',
+				success : 'Translation completed!'
+			}
+		});
+	},
+	error: function(xhr) {
+	  alert('ERROR check logs');
+	  console.log(xhr);
+	  button_elem.classList.remove('disabled');
+	  button_elem.classList.remove('loading');
+	}
+  });
+}
+
+function send_changes_trs(button_elem, string_id) {
+  button_elem.classList.add('disabled');
+  button_elem.classList.add('loading');
+  let translation = document.getElementById('translation_'+string_id).value;
+  let comment = document.getElementById('comment_'+string_id).value;
+  if (!translation) {translation=''}
+  if (!comment) {comment=''}
+  if ((translation=='')&&(comment=='')) {
+		alert('No changes were made.');
+		button_elem.classList.remove('disabled');
+		button_elem.classList.remove('loading');
+		return;
+  }
+  $.ajax({
+	url: Flask.url_for('api.trssubmitchanges'),
+	type: "POST", //send it through get method
+	dataType: 'json',
+	data: JSON.stringify({ 
+	  'translation': translation,
+	  'comment': comment,
+	  'string_id': string_id
+	}),
+	contentType: "application/json; charset=utf-8",
+	success: function(response) {
+		if (response.message852) {
+			alert(response.message852);
+		  button_elem.classList.remove('disabled');
+		  button_elem.classList.remove('loading');
+			return;
+		}
+	  // get the datatable
+	  let table = $("#working_table").DataTable();
+    // Find indexes of rows which have string_id in the first column
+    let indexu = table.rows().eq( 0 ).filter( function (rowIdx) {
+        return table.cell( rowIdx, 0 ).data() === string_id ? true : false;
+    } );
+	  table.row(indexu).data(response);
+	  button_elem.classList.remove('disabled');
+	  button_elem.classList.remove('loading');
+  	reload_progress();
+	},
+	error: function(xhr) {
+	  alert('ERROR check logs');
+	  console.log(xhr);
+	  button_elem.classList.remove('disabled');
+	  button_elem.classList.remove('loading');
+	}
+  });
+}
+</script>
+{% endblock %}

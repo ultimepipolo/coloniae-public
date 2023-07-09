@@ -1,0 +1,116 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Badges - Coloniae{% endblock %}
+
+{% block corps %}
+<!-- modal for showing holders -->
+<div id="modal_badge_holders" class="ui modal small">
+  <i class="close icon"></i>
+  <div class="header">
+    Holders of <span id="modal_badge_name"></span>
+  </div>
+  <div class="content" id="modal_badge_list">
+
+  </div>
+  <div class="actions">
+    <div class="ui button" onclick="javascript:$('#modal_badge_holders').modal('hide');">Close</div>
+  </div>
+</div>
+<!-- modal end -->
+<div class="ui text container fluid">
+    <h1 class="ui center aligned header">Coloniae Badges</h1>
+    
+    <p><b>Badges</b> in Coloniae are special titles given to players representing a role.</p>
+    
+    <p><b>Roles</b> give access to exclusive features of the website. Roles show up next to the name on the website. Here are the current Coloniae roles and thier description:</p>
+    <table class="ui compact table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Color</th>
+          <th>Description</th>
+          <th>Current holders</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for badge in roles_list %}
+        <tr>
+          <td>{{badge.name}}</td>
+          <td><span class="ui {{badge.color}} label"></span></td>
+          <td>{{badges_descs[badge.name]}}</td>
+          <td><a href="#" onclick="javascript:showRoleHolders('{{badge.name}}')">Current Holders</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <!--<p><b>Medals</b> are honorific badges awarded upon completion of specific events or tasks. Here are the current Coloniae medals and thier description:</p>
+    <table class="ui compact table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Icon</th>
+          <th>Description</th>
+          <th>Current holders</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for badge in medals_list %}
+        <tr>
+          <td>{{badge.name}}</td>
+          <td><img src="{{badge.url}}"></img></td>
+          <td>{{badges_descs[badge.name]}}</td>
+          <td><a href="#" onclick="javascript:showMedalHolders('{{badge.name}}')">Current Holders</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>-->
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script type="text/javascript">
+  function showRoleHolders(badgename) {
+    document.getElementById('modal_badge_name').innerHTML = badgename;
+    document.getElementById('modal_badge_list').innerHTML = '<div class="ui basic segment"><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+    $('#modal_badge_holders').modal('show');
+    $.ajax({
+      type: 'GET',
+      url: '{{url_for('api.roleholders', rolename='')}}'+badgename,
+      dataType: 'json',
+      success: function (data) {
+          inhtml = '<ul class="ui list">';
+          for (var i = 0; i<data.length; i++) {
+            inhtml += '<li><a target="_blank" href="{{url_for('main.player', username='')}}'+data[i]+'">'+data[i]+'</a></li>';
+          }
+          inhtml += '</ul>';
+          document.getElementById('modal_badge_list').innerHTML = inhtml;
+      }
+    });
+  }
+
+  function showMedalHolders(badgename) {
+    document.getElementById('modal_badge_name').innerHTML = badgename;
+    document.getElementById('modal_badge_list').innerHTML = '<div class="ui basic segment"><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+    $('#modal_badge_holders').modal('show');
+    $.ajax({
+      type: 'GET',
+      url: '{{url_for('api.medalholders', medalname='')}}'+badgename,
+      dataType: 'json',
+      success: function (data) {
+          inhtml = '<ul class="ui list">';
+          for (var i = 0; i<data.length; i++) {
+            inhtml += '<li><a target="_blank" href="{{url_for('main.player', username='')}}'+data[i]+'">'+data[i]+'</a></li>';
+          }
+          inhtml += '</ul>';
+          document.getElementById('modal_badge_list').innerHTML = inhtml;
+      }
+    });
+  }
+
+  $(document).ready(function(){
+      // initialize modals ---------------------------------------------------------
+      $('#modal_badge_holders').modal();
+  });
+</script>
+{% endblock %}

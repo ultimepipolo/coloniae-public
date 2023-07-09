@@ -1,0 +1,60 @@
+{% extends "reference.html" %}
+
+{% block contents %}
+  {% if page=="index" %}
+			<div id="indexcontainer" class="index-text">
+				<br /><h3>MyColony is an awesome building simulation game.</h3>
+				<h4>Build your own thriving colony from the ground up by colonizing an empty planet, 
+				harvesting its natural resources and use them to build homes, refineries, and many other buildings. Establish an atmosphere and 
+				recycle your trash. Build bots to reach the outer limits of your land. Expand your territory beyond your believe and get millions 
+				of colonists working and living in the world you created. Research technologies to advance in the game and discover what the ancient 
+				inhabitants of the land you colonized have to offer you. Play different races and different types of maps to build your colony and 
+				combine the resources to keep growing.<br /><br />
+				Use this reference site as your MyColony bible, discover all you need to know about every building and technology out there. How 
+				you need to build an "Aluminium Generator", how much robots the "Advanced Robotics Inc" produces per minute or what does the "Tourist 
+				Trap" technology unlock. All this and much more in your MyColony bible.<br /><br />
+				Welcome to the reference site!</h4><br /><br /><br />
+				<span class="index-infos"><h5><i>Since update 0.4.1, the reference site aims to be responsive for mobile devices. Please target the mobile version on your browser
+				parameters on your smartphones and tablets...</i></h5></span>
+			</div>
+   {% elif page=="changelogs" %}
+     <div id="tablecontainer" class="row">
+				<div class="table-brand">{{ tablename }}</div>
+        {% if tabledesc %}
+          <dt class="index-text" style="padding-top:20px;padding-bottom:20px">{{ tabledesc|safe }}</dt>
+        {% endif %}
+        <form action="#" onsubmit="javascript:loadChangelogs()">
+          Version:<br>
+          <input type="text" id="form_version">
+          <br>
+          <input type="submit" value="Submit">
+        </form>
+				<table id="maintable" class="display nowrap" width="100%"></table>
+			</div>
+   {% else %}
+     <div id="tablecontainer" class="row">
+				<div class="table-brand">{{ tablename }}</div>
+        {% if tabledesc %}
+          <dt class="index-text" style="padding-top:20px;padding-bottom:20px">{{ tabledesc|safe }}</dt>
+        {% endif %}
+				<table id="maintable" class="display nowrap" width="100%">
+				</table>
+			</div>
+   {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  {% if page=="tech_h" or page=="tech_i" %}
+<script> 
+  elmnt = document.getElementById("techpic");
+  xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+  if (this.readyState == 4 && this.status == 200) {
+      elmnt.innerHTML = this.responseText;
+    }
+  }      
+  xhttp.open("GET", '/static/images/TechTree_{% if page=="tech_h" %}Human{% elif page=="tech_i" %}Insectoids{% endif %}_0.49.svg', true);
+  xhttp.send();
+</script>
+  {% endif %}
+{% endblock %}

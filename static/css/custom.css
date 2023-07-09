@@ -1,0 +1,105 @@
+@media only screen and (min-width:768px) {
+	body {
+		background-image: url("/static/ss-957500.jpg");
+		background-size: cover !important;
+		background-attachment: fixed;
+		background-position-x: center;
+		background-position-y: center;
+	}
+	.ui.main.container {
+		margin-top: 60px;
+	}
+}
+
+@media only screen and (max-width:767px) {
+	.ui.main.container {
+		margin-top: 43px;
+		margin-left: 0px !important;
+		margin-right: 0px !important;
+		margin-bottom: 0px;
+		border-radius: 0px;
+	}
+	.ui.container {
+		width:auto!important;
+		margin-left:0.3em!important;
+		margin-right:0.3em!important;
+	}
+	.custom-articlehead > .height.wide.column.left.aligned.text  {
+		padding-bottom: 0px !important;
+	}
+	.custom-articlehead > .height.wide.column.right.aligned.text {
+		padding-top: .5rem !important;
+	}
+}
+.ui.segment {
+	padding: .75em .5em;
+}
+.ui.text.container {
+	max-width: 800px!important;
+}
+
+.image-overlay {
+	position: absolute;
+	top: 0;
+	background: rgba(255, 255, 255);
+	color: #8c1818;
+	width: 100%;
+	text-align: center;
+	border-top-right-radius: 4px;
+	border-top-left-radius: 4px;
+}
+
+.mx-header::after {
+	right: 0;
+	border-width: 4px 4px 0 0;
+	content: "";
+}
+.mx-header::before {
+	left: 0;
+	border-width: 4px 0 0 4px;
+	content: "";
+}
+.mx-header::before, .mx-header::after {
+	border-color: #272727 transparent transparent transparent;
+	position: absolute;
+	border-style: solid;
+	bottom: -4px;
+}
+.mx-header {
+	padding: 6px 5px;
+	font-weight: bold;
+	font-size: 15px;
+	background: linear-gradient(#1b1c1d,#464646);
+	text-shadow: 1px 1px #000;
+	border-radius: 3px 3px 0 0;
+	line-height: 19px;
+	color: #E7EEF0;
+	position: relative;
+}
+.mx-header > a, .mx-header > span > a {
+	color: #E7EEF0;
+	text-decoration: underline;
+}
+.ui.segments.custom-segments {
+	margin: 0 4px;
+  border-top-left-radius: 0rem;
+  border-top-right-radius: 0rem;
+  border-bottom-left-radius: .28571429rem;
+  border-bottom-right-radius: .28571429rem;
+}
+
+.ui.accordion .custom-title {
+  cursor:initial;
+}
+
+@media only screen and (max-width: 767px) {
+  .mobile-hide {
+    display: none;
+  }
+}
+
+@media only screen and (min-width: 768px) {
+  .mobile-show {
+    display: none;
+  }
+}

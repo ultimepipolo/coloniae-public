@@ -1,0 +1,1550 @@
+{% extends "squelette.html" %}
+
+{% block titre %}Layout - Coloniae{% endblock %}
+
+
+{% block main_corpus %}
+<canvas id="thumbnail_canvas" style="display: none" width="1000" height="1000"></canvas>
+<div class="layout_main" >
+  <div class="layout_menu">
+  	<div class="layout_options" style="margin-top:10px">
+      {% if editallowed %}
+  		<button class="layout_button" onclick="create_new_blank()">Create new</button>
+  		<button class="layout_button" id="button_size_change" onclick="change_layout_size()">Change size to unknown</button>
+      {% endif %}
+  		<button class="layout_button" style="width: 49%" onclick="change_layout_zoom(1)">Zoom in</button>
+  		<button class="layout_button" style="width: 49%" onclick="change_layout_zoom(0)">Zoom out</button>
+  	</div>
+    {% if editallowed %}
+  	<div class="layout_options">
+		<p id="layout_selection_text">No selection</p>
+  		<div class="layout_checkbox">
+  			<input id="checkbox_select_mode" type="checkbox">
+  			<label for="checkbox_select_mode">Select mode</label>
+  		</div>
+  		<div class="layout_checkbox">
+  			<input id="checkbox_batch_select_mode" type="checkbox">
+  			<label for="checkbox_batch_select_mode">Batch selection</label>
+  		</div>
+  		<button class="layout_button" id="button_clear_selection" onclick="clear_building_selection()">Clear selection</button>
+  		<button class="layout_button" id="button_delete_selection" onclick="delete_building_selection()">Delete selected</button>
+  		<button class="layout_button" id="button_paste">Paste selection</button>
+  		<div id="div_paste">
+  			<div class="layout_numberinput">
+	  			<label for="paste_x_coordinate">X coordinate</label>
+	  			<input type="number" value="0" id="paste_x_coordinate">
+  			</div>
+  			<div class="layout_numberinput">
+	  			<label for="paste_y_coordinate">Y coordinate</label>
+	  			<input type="number" value="0" id="paste_y_coordinate">
+  			</div>
+  			<button onclick="javascript:paste_layout();" id="button_load_paste" class="layout_button">Load data</button>
+  		</div>
+  	</div>
+    {% endif %}
+	  <div  class="layout_options">
+  		<button class="layout_button" id="button_export">Export Layout</button>
+      {% if editallowed %}
+      <button class="layout_button" id="button_import">Import Layout</button>
+		  <div id="div_import">
+   			<input id="import_text" type="file"></input>
+  			<div class="layout_numberinput">
+	  			<label for="import_x_coordinate">X coordinate</label>
+   				<input type="number" value="0" id="import_x_coordinate">
+   			</div>
+  			<div class="layout_numberinput">
+	  			<label for="import_y_coordinate">X coordinate</label>
+   				<input type="number" value="0" id="import_y_coordinate">
+   			</div>
+   			<button onclick="javascript:import_layout();" id="button_load_import" class="layout_button">Load data</button>
+				</div>
+      {% endif %}
+	  </div>
+    {% if editallowed %}
+  	<div class="layout_options"> 
+  		<div class="layout_numberinput">
+        <div class="ui search" id="building_select_div">
+          <div class="ui icon input">
+            <label for="building_select">Building name:</label>
+            <input id="building_select" class="prompt" type="text" placeholder="Search buildings..." style="margin-bottom:5px">
+          </div>
+          <div class="results"></div>
+        </div>
+		  </div>
+		  <div class="layout_checkbox">
+			  <input id="checkbox_flipped_mode" type="checkbox">
+			  <label for="checkbox_flipped_mode">Flip building</label>
+		  </div>
+		  <!--<div class="layout_checkbox">
+			  <input id="checkbox_delete_mode" type="checkbox">
+			  <label for="checkbox_delete_mode">Delete mode</label>
+		  </div>-->
+	  </div>
+    {% endif %}
+		<div class="layout_options">
+			<button class="layout_button" id="button_check_layout">Check Layout</button>
+			<div id="buildings_table">
+				<div class="building_table_header">
+					<div>
+						Color
+					</div>
+					<div>
+						Building
+					</div>
+					<div>
+						Number
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="layout_stats">
+			<button class="layout_button" onclick="show_stats_container()">Open Layout Stats</button>
+		</div>
+		<div class="layout_options">
+			<p>ID : <span id="layout_server_id"></span></p>
+			<p>Author : <span id="layout_author"></span></p>
+      {% if editallowed %}
+			<label for="layout_name">Layout name</label>
+			<input id="layout_name" type="text">
+			<label for="layout_notes">Notes</label>
+			<textarea id="layout_notes" type="text"></textarea>
+      			<div class="layout_checkbox">
+				<input id="checkbox_layout_hidden" type="checkbox">
+				<label for="checkbox_layout_hidden">Keep private</label>
+			</div>
+			<p>Last save : <span id="layout_last_save"></span></p>
+			<button class="layout_button" onclick="save_to_coloniae()">Save to Coloniae</button>
+      {% endif %}
+		</div>
+  	<div class="layout_options">
+		  <button class="layout_button" onclick="show_about_container()">About the tool</button>
+	  </div>
+	</div>
+			
+	<div class="layout_grid_container">
+		<div class="layout_grid">
+			<div class="layout_grid_box">
+				<div  id="layout_container">
+		  			Loading...
+		  		</div>
+			</div>
+	  	</div>
+		<span class="tooltip_span"></span>
+	</div>
+</div>
+
+<div class="stats_container" id="stats_container" style="display: none;">
+	<span onclick="hide_stats_container()">X</span>
+	<div id="stats_table">
+	</div>
+	<div id="costs_table">
+	</div>
+	<div id="prods_table">
+	</div>
+</div>
+<div class="stats_container" id="about_container" style="display: none;grid-template-rows:100%">
+	<span onclick="hide_about_container()">X</span>
+	<div>
+		<h4>Layouts building tool</h4>
+		<p>This tool was created by gkdkggl and Sobeirannovaocc in July/August 2019.</p>
+    <p>Video tutorial:</p>
+    <video id="video1" controls width="70%">
+      <source src="/static/media/Coloniae Layouts Tutorial.mp4" type='video/mp4'>
+    </video>
+    <div style="margin-top:20px;">
+			Last update 17/05/2020:<ul><li>Bug fixed: cost and production stats would not compute</li><li>Added Jail capacity and Transit capacity stats</li></ul>
+	    <br>14/09/2019:<ul><li>Bug fixed: some buildings would cause the layout to not save</li><li>Added a check on wether or not the building can be flipped. If can't, "Flip Building" checkbox unchecks automatically</li></ul>
+	    <br>29/08/2019:<ul><li>Added deletion when re-clicking a building</li><li>Removed "delete mode" checkbox</li><li>Clicking on a building in the layout summary table now selects it</li></ul>
+	    <br>25/08/2019:<ul><li>Launched</li></ul>
+	  </div>
+	</div>
+</div>
+<div class="stats_container" id="saving_container" style="display: none;">
+	<div>
+		<h4>Saving in progress...</h4>
+		<p>This shouldn't take more than 10 seconds, depending on the speed of your connection.</p>
+	</div>
+</div>
+
+
+<!-- The Modal, for confirmation to erease changes to layout when importing new -->
+<div class="ui modal small" id="modal_confirm">
+  <i class="close icon"></i>
+  <div class="header">
+    Confirmation
+  </div>
+  <div class="content">
+    You are about to print a layout that will erase some existing buildings that are already on the grid. Are you sure?
+  </div>
+  <div class="actions">
+  <button class="ui button" id="modal_button_yes" type="button">Yes</button>
+  <button class="ui button" id="modal_button_no" type="button">No</button>
+  </div>
+</div>
+
+<!-- The Modal, for asking if save to coloniae before creating new  -->
+<div class="ui modal small" id="modal_createnew">
+  <i class="close icon"></i>
+  <div class="header">
+    Confirmation
+  </div>
+  <div class="content">
+    Do you want to save your changes to Coloniae before creating a new blank layout?
+  </div>
+  <div class="actions">
+  <button class="ui button" id="modal_button_new_yes" type="button">Yes</button>
+  <button class="ui button" id="modal_button_new_no" type="button">No</button>
+  <button class="ui button" type="button" onclick="javascript:$('#modal_createnew').modal('hide');">Cancel</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- for decompression -->
+<script type="text/javascript" src="/static/js/lz-string.js"></script>
+<!-- styling for layouts page -->
+<link rel="stylesheet" href="/static/css/tools/layout.css">
+<!-- load current Game -->
+<script type="text/javascript" src="https://www.apewebapps.com/apps/my-colony/{{mycolony_version}}/game.js"></script>
+<!-- load saved layout -->
+<script>
+layoutnew = {{newlayout | tojson}}
+editallowed = {{editallowed | tojson}}
+layout_global_contents = {{layout_global_contents | tojson}};
+document.getElementById('layout_server_id').innerHTML = layout_global_contents.lid;
+document.getElementById('layout_author').innerHTML = layout_global_contents.author;
+{% if editallowed %}
+document.getElementById('layout_name').value = layout_global_contents.name;
+document.getElementById('layout_notes').value = layout_global_contents.desc;
+document.getElementById('layout_last_save').innerHTML = (new Date(layout_global_contents.lastupdate*1000)).toLocaleString();
+document.getElementById('checkbox_layout_hidden').checked = layout_global_contents.hidden;
+{% endif %}
+</script>
+<!-- ACTUAL LAYOUTS SCRIPT -->
+<script> 
+jQuery(document).ready(function(){
+    // building catalog
+	var bd_loop = window.ColonyGame.buildings;
+	for (var b=0; b < bd_loop.length; b++) {
+		building_catalog[bd_loop[b].name] = {'width' : bd_loop[b].tileWidth, 'height': bd_loop[b].tileHeight}
+		building_flip[bd_loop[b].name] = bd_loop[b].canFlip;
+	    for (var t=0; t < window.ColonyGame.tiles.length; t++) {
+	      var currenttile = window.ColonyGame.tiles[t]
+						if (currenttile.name==bd_loop[b].tile[0]) {
+	        building_tiles[bd_loop[b].name] = currenttile.image;
+	        break;
+	      }
+		}
+	}
+  // resources catalog
+  var resources_loop = window.ColonyGame.resources;
+  for (var r=0; r < resources_loop.length; r++) {
+    var temp_res = resources_loop[r];
+    if (temp_res.name=='Money') {continue;} // we want money first in the list
+		reslist.push(temp_res.name);
+	}
+  reslist.sort();
+  reslist = ['Money'].concat(reslist);
+  //console.log(reslist);
+  for (var r=0; r < reslist.length; r++) {
+    var temp_res = reslist[r]; // here its just the name
+		resl[temp_res] = r;
+	}
+  //console.log(resl);
+	var [costs, prods, stats, multi, smelt] = build_rates(bd_loop);
+	print_layout_grid(grid_size,grid_size);
+	$("#button_check_layout").on("click", function() {parse_layout_stats(grid_size, grid_size);});
+	$("#button_export").on("click", function() {export_layout(grid_size, grid_size);});
+	$("#button_import").on("click", function() {import_layout_init();});
+	$("#button_paste").on("click", function() {paste_layout_init();});
+	// init autocomplete
+  var autocomplete_search_contents = [];
+  for (var r=0; r < Object.keys(building_catalog).length; r++) {
+    var temp_bd = Object.keys(building_catalog)[r]; // here its just the name
+		autocomplete_search_contents.push({'title':temp_bd})
+	}
+	$('#building_select_div').search({source: autocomplete_search_contents});
+	$('#checkbox_select_mode').change(function(){
+			if (!$(this).is(':checked')) { // user just unchecked the checkbox
+				checkbox_batch_select_mode.checked = false;
+				checkbox_batch_select_mode.parentElement.style.display = "none";
+	        }else{
+				document.getElementById('button_clear_selection').style.display = "";
+				document.getElementById('button_delete_selection').style.display = "";
+				checkbox_batch_select_mode.parentElement.style.display = "";
+	        }
+	  });
+    if (checkbox_batch_select_mode != null) {
+		  checkbox_batch_select_mode.parentElement.style.display = "none";
+    }
+    if (document.getElementById('button_delete_selection') != null) {
+		  document.getElementById('button_clear_selection').style.display = "none";
+    }
+    if (document.getElementById('button_delete_selection') != null) {
+		  document.getElementById('button_delete_selection').style.display = "none";
+    }
+    if (document.getElementById('button_size_change') != null) {
+	    if (grid_size==51){
+			    document.getElementById('button_size_change').innerHTML = 'Change size to 101x101';
+	    } else if (grid_size==101) {
+	    	  document.getElementById('button_size_change').innerHTML = 'Change size to 51x51';
+	    } else {
+	    	  document.getElementById('button_size_change').innerHTML = 'Invalid grid size';
+	    }
+    }
+    // init modals
+    $('#modal_createnew').modal();
+    $('#modal_confirm').modal();
+    // load saved layout from coloniae if exists
+    if (!layoutnew) {
+    	if (layout_global_contents.contents.width==100) {
+    		change_layout_size();
+    	}
+    		grid_build_area(layout_global_contents.contents, 0, 0);
+		}
+});
+
+
+function build_rates(bds) {
+	for (var b=0; b < bds.length ;b++) {
+		var building = bds[b];
+		costs[building.name] = new Array(reslist.length).fill(0);
+		prods[building.name] = new Array(reslist.length).fill(0);
+		smelt[building.name] = new Array(reslist.length).fill(0);
+		stats[building.name] = new Array(stlist.length).fill(0);
+		if (building.generates != null) {
+			if (building.requiresWorkers) {
+				prods[building.name][resl[building.generates]] += building.generateAmount*building.acceptsWorkers/building.generateTime;
+			} else {
+				prods[building.name][resl[building.generates]] += building.generateAmount/building.generateTime;
+			}
+		}
+		//smelt part
+		multi[building.name] = 1;
+		if (building.smelts != null) {
+			if (building.smelts.input != undefined) {
+				var inputs = building.smelts.input.split(',');
+		        for (var i=0; i < inputs.length ;i++) {
+					var o = inputs[i];
+					if (building.requiresWorkers) {
+						prods[building.name][resl[o]] -= 1 * building.acceptsWorkers / building.smelts.time;
+					} else {
+						prods[building.name][resl[o]] -= 1 / building.smelts.time;
+					}
+				}
+			}
+			if (building.smelts.output != undefined) {
+				var outputs = building.smelts.output.split('|');
+				multi[building.name] = outputs.length;
+				for (var i=0; i < outputs.length ;i++) {
+					var o = outputs[i];
+					if (building.requiresWorkers) {
+						smelt[building.name][resl[o]] += building.smelts.ratio * building.acceptsWorkers / building.smelts.time;
+					} else {
+						smelt[building.name][resl[o]] += building.smelts.ratio / building.smelts.time;
+					}
+				}
+			}
+		}
+
+		try {
+			var fuels = building.requiresFuel.resource.split(',');
+	        for (var i=0; i < fuels.length ;i++) {
+				var fuel = fuels[i];
+				prods[building.name][resl[fuel]] -= 1 / building.requiresFuel.rate;
+			}
+		} catch {
+			//pass
+		}
+		try {
+			for (var i=0; i < building.cost.length ;i++) {
+				var cost = building.cost[i];
+				costs[building.name][resl[cost.resource]] += cost.amount;
+			}
+		} catch {
+			//pass
+		}
+		try {
+			stats[building.name][stl.Housing] += building.providesShelter;
+		} catch {
+			//pass
+		}
+		try {
+			stats[building.name][stl.Jobs] += building.acceptsWorkers;
+		} catch {
+			//pass
+		}
+		try {
+			stats[building.name][stl.Education] += building.educates;
+		} catch {
+			//pass
+		}
+		try {
+			stats[building.name][stl.Healing] += building.heals;
+		} catch {
+			//pass
+		}
+		try {
+			stats[building.name][stl.Entertainment] += building.entertains;
+		} catch {
+			//pass
+		}
+		try {
+			stats[building.name][stl['Jail capacity']] += building.jailCapacity;
+		} catch {
+			//pass
+		}
+		try {
+			stats[building.name][stl['Transit capacity']] += building.transitCapacity;
+		} catch {
+			//pass
+		}
+	}
+	return [costs, prods, stats, multi, smelt];
+}
+
+
+function change_layout_size() {
+	// 1. save all current buildings (copied from export_layout())
+	var layout_buildings = {};
+	for (var j = 0; j < grid_size; j++) {
+		for (var i = 0; i < grid_size; i++) {
+			var temp_block = document.getElementById(j+"_"+i);
+			var temp_block_name = temp_block.getAttribute("name")
+			if (!layout_buildings.hasOwnProperty(temp_block_name) && temp_block_name!="None") {
+				layout_buildings[temp_block_name] = {'x':j, 'y':i};
+			}
+		}
+	}
+	if (grid_size==51) {
+		// change to 101
+		grid_size = 101;
+    if (document.getElementById('button_size_change') != null) {
+		  document.getElementById('button_size_change').innerHTML = 'Change size to 51x51';
+    }
+	} else if (grid_size==101) {
+		// change to 51
+		grid_size = 51;
+    if (document.getElementById('button_size_change') != null) {
+		  document.getElementById('button_size_change').innerHTML = 'Change size to 101x101';
+    }
+	}
+	var export_buildings = [];
+	var needs_crop = false;
+	for (var i in layout_buildings) {
+		var temp_def = i.split('|')[0];
+		if (i.split('|')[2]==1) {
+			var temp_flipped = true;
+		} else {
+			var temp_flipped = false;
+		}
+		if (temp_flipped) {
+			var temp_building_height = building_catalog[temp_def].width;
+			var temp_building_width = building_catalog[temp_def].height;
+		} else {
+			var temp_building_height = building_catalog[temp_def].height;
+			var temp_building_width = building_catalog[temp_def].width;
+		}
+		if (layout_buildings[i].x+temp_building_width>grid_size || layout_buildings[i].y+temp_building_height>grid_size) {
+		// check if layout needs cropping. for the concerned buildings, not add them to the list.
+			needs_crop = true;
+		} else {
+			export_buildings.push({'x':layout_buildings[i].x, 'y':layout_buildings[i].y, 'def':temp_def, 'flipped':temp_flipped});
+		}
+	}
+	if (needs_crop){
+		$("#modal_confirm").modal('show');
+		// reinitialize all the functions attached (no multiple calls)
+		$("#modal_button_yes").off("click"); 
+		$("#modal_button_no").off("click"); 
+		$("#modal_button_yes").on("click", function() {
+			var export_contents = {"width":grid_size,"height":grid_size,"buildings":export_buildings};
+			// 2. print layout grid
+			print_layout_grid(grid_size, grid_size);
+			// 3.import the saved buildings
+			grid_build_area(export_contents ,0, 0);
+      $("#modal_confirm").modal('hide');
+		});
+		$("#modal_button_no").on("click", function() {
+			if (grid_size==51) {
+				// change to 101
+				grid_size = 101;
+				document.getElementById('button_size_change').innerHTML = 'Change size to 51x51';
+			} else if (grid_size==101) {
+				// change to 51
+				grid_size = 51;
+				document.getElementById('button_size_change').innerHTML = 'Change size to 101x101';
+			}
+      $("#modal_confirm").modal('hide');
+		});
+		return;
+	} // else continue normally
+	var export_contents = {"width":grid_size,"height":grid_size,"buildings":export_buildings};
+	// 2. print layout grid
+	print_layout_grid(grid_size, grid_size);
+	// 3.import the saved buildings
+	grid_build_area(export_contents ,0, 0);
+}
+
+function change_layout_zoom(direction){
+	var layout = document.getElementsByClassName("layout_grid")[0];
+	var width = jQuery(layout).width();
+	if(direction == 1){
+		layout.style.width = (width+100) + "px";
+		layout.style.paddingTop = (width+100) + "px";
+	}else if(direction == 0){
+		layout.style.width = (width-100) + "px";
+		layout.style.paddingTop = (width-100) + "px";
+	}
+}
+
+
+function print_layout_grid(x_size, y_size){
+	var container = document.getElementById("layout_container");
+	container.style = "display: grid; grid-template-columns:repeat("+x_size+", 1fr); grid-template-rows:repeat("+y_size+", 1fr)";
+	var grid = '';
+	for (var i = 0; i < y_size; i++) {
+		for (var j = 0; j < x_size; j++) {
+      if (editallowed) {
+			  grid += '<div class="grid_block" onmousedown="set_mouse_down()" onmouseup="set_mouse_up()" onmousemove="showTooltip(this)" onmouseover="grid_block_do_building_selection(this)" onclick="grid_block_do_building(this)" id="'+j+"_"+i+'" name="None"></div>';
+      } else {
+			  grid += '<div class="grid_block" onmousedown="set_mouse_down()" onmouseup="set_mouse_up()" onmousemove="showTooltip(this)"id="'+j+"_"+i+'" name="None"></div>';
+      }
+		}
+	}
+	container.innerHTML = grid;
+}
+
+
+function grid_block_do_building(block){
+	if (checkbox_select_mode.checked) {
+		if (!checkbox_batch_select_mode.checked) {
+			grid_block_selection_add_building(block);
+		}
+	} else {
+			grid_block_add_building(block); // this will delete if there is already a building
+		//if (checkbox_delete_mode.checked) {
+		//	grid_block_delete_building(block);
+		//} else {
+		//	grid_block_add_building(block);
+		//}
+	}
+}
+
+function grid_block_do_building_selection(block) {
+	if (checkbox_select_mode.checked) {
+		if (checkbox_batch_select_mode.checked) {
+			if (mouse_down) {
+				grid_block_selection_add_building(block, false);
+			}
+		}
+	}
+}
+
+function set_mouse_down(){
+	mouse_down = true;
+}
+function set_mouse_up(){
+	mouse_down = false;
+}
+
+function showTooltip(block) {
+	var tooltip = document.getElementsByClassName('tooltip_span')[0];
+	var block_coordinates_x = Number(block.id.split("_")[0]);
+	var block_coordinates_y = Number(block.id.split("_")[1]);
+	var block_building_name = block.getAttribute('name').split('|')[0];
+	var block_building_flipped = block.getAttribute('name').split('|')[2];
+	try {
+		var building_color = building_catalog[block_building_name].color;
+	} catch (e) {
+		var building_color = 'white';
+	}
+	if (block_building_flipped=='1') {
+		block_building_flipped = 'yes';
+	} else {
+		block_building_flipped = 'no';
+	}
+	tooltip.innerHTML = 'x : '+block_coordinates_x+' y : '+block_coordinates_y+'<br>'+block_building_name+'<br>flipped : '+block_building_flipped;
+	tooltip.style.backgroundColor = building_color;
+	var grid_container = document.getElementsByClassName('layout_grid_container')[0];
+	var mouse_x_grid = event.pageX-grid_container.offsetLeft; // mouse x position in the div
+	var mouse_y_grid = event.layerY; // mouse y position in the div
+	var min_left = (tooltip.clientWidth*0.3);
+	var max_left = grid_container.clientWidth-(tooltip.clientWidth*1.3);
+	var planned_left = mouse_x_grid-(tooltip.clientWidth/2);
+	var bottom_shift = grid_container.scrollHeight*.85; // decide when to put tooltip on top of mouse
+	var planned_top = mouse_y_grid+(tooltip.clientHeight); // use if far from bottom
+	var planned_bottom = mouse_y_grid-(tooltip.clientHeight*1.5); // use if close from bottom
+
+	if (planned_left<min_left) {
+		tooltip.style.left = min_left+'px';
+	} else if (planned_left>max_left) {
+		tooltip.style.left = max_left+'px';
+	} else {
+		tooltip.style.left = planned_left+'px';
+	}
+	if (planned_top>bottom_shift) {
+		tooltip.style.top = planned_bottom+'px';
+	} else {
+		tooltip.style.top = planned_top+'px';
+	}
+	
+}
+
+function grid_block_add_building(block, allow_delete=true){
+	var building = document.getElementById("building_select");
+	var building_name = building.value;
+  if (!building_catalog[building_name]) {return;} // if building doesnt exist
+	if (!building_flip[building_name]) { // force unflip when canFlip = false
+		checkbox_flipped_mode.checked = false;
+  }
+	if (checkbox_flipped_mode.checked) {
+    var flip = 1;
+  } else {
+		var flip = 0;
+	}
+	if(building_name != ''){
+		var building_size_x = building_catalog[building_name].width;
+		var building_size_y = building_catalog[building_name].height;
+		if (flip==1) {
+			[building_size_x, building_size_y] = [building_size_y, building_size_x];
+		}
+		var current_coordinates_x = Number(block.id.split("_")[0]);
+		var current_coordinates_y = Number(block.id.split("_")[1]);
+		// check if no obstacles to build
+		buildable = true;
+		for (var i = 0; i < building_size_y ; i++) {
+			for (var j = 0; j < building_size_x ; j++) {
+				var temp_block = document.getElementById((current_coordinates_x+j)+"_"+(current_coordinates_y+i));
+				if (temp_block == null) {
+					buildable = false;
+				} else {
+					if (temp_block.getAttribute("name") != "None") {
+						buildable = false;
+					}
+				}
+			}
+		}
+		if (buildable) {
+			id_building += 1;
+			if (building_catalog[building_name].hasOwnProperty('color')) {
+				var building_color = building_catalog[building_name].color
+			} else {
+				var building_color = colors[Math.floor(Math.random()*colors.length)];
+				// remove the color from the list of available colors
+				colors.splice(colors.indexOf(building_color), 1);
+				// add the color to the object
+				building_catalog[building_name].color = building_color;
+			}
+			for (var i = 0; i < building_size_y ; i++) {
+				for (var j = 0; j < building_size_x ; j++) {
+					var temp_block = document.getElementById((current_coordinates_x+j)+"_"+(current_coordinates_y+i));
+					temp_block.style.backgroundColor = building_color;
+					if(building_size_x > j && j < building_size_x-1 ){
+						temp_block.style.marginRight = 0;
+						temp_block.style.borderTopRightRadius  = 0;
+						temp_block.style.borderBottomRightRadius  = 0;
+						temp_block.style.borderRight = "none";
+					}
+					if(building_size_y > i && i < building_size_y-1 ){
+						temp_block.style.marginBottom = 0;
+						temp_block.style.borderBottomLeftRadius  = 0;
+						temp_block.style.borderBottomRightRadius  = 0;
+						temp_block.style.borderBottom = "none";
+					}
+					if(i > 0){
+						temp_block.style.marginTop = 0;
+						temp_block.style.borderTopLeftRadius  = 0;
+						temp_block.style.borderTopRightRadius  = 0;
+						temp_block.style.borderTop = "none";
+					}
+					if(j > 0){
+						temp_block.style.marginLeft = 0;
+						temp_block.style.borderTopLeftRadius  = 0;
+						temp_block.style.borderBottomLeftRadius  = 0;
+						temp_block.style.borderLeft = "none";
+					}
+					temp_block.setAttribute("name", building_name+'|'+id_building+'|'+flip);
+				}
+			}
+		} else {
+      if (allow_delete) {
+        grid_block_delete_building(block)
+      } else {
+			  alert("Can't build here!")
+		  }
+    }
+	}
+}
+
+
+function grid_block_delete_building(block){
+	var initial_block_name = block.getAttribute("name");
+	var initial_block_coordinates_x = Number(block.id.split("_")[0]);
+	var initial_block_coordinates_y = Number(block.id.split("_")[1]);
+	if (initial_block_name == "None") { // check if it's not a building
+		return;
+	}
+	// find the upper left corner of the building
+	//   find left border
+	var temp_x = initial_block_coordinates_x;
+	while (block.getAttribute("name") == initial_block_name) {
+		temp_x -= 1;
+		if (temp_x==-1) {break;}
+		var block = document.getElementById(temp_x+'_'+initial_block_coordinates_y);
+	}
+	temp_x += 1;
+	//   find top border
+	var block = document.getElementById(initial_block_coordinates_x+'_'+initial_block_coordinates_y);
+	var temp_y = initial_block_coordinates_y;
+	while (block.getAttribute("name") == initial_block_name) {
+		temp_y -= 1;
+		if (temp_y==-1) {break;}
+		var block = document.getElementById(initial_block_coordinates_x+'_'+temp_y);
+	}
+	temp_y += 1;
+	// set block as leftmost & topmost block of building
+	var block = document.getElementById(temp_x+'_'+temp_y);
+	var building_name = block.getAttribute("name").split('|')[0].trim();
+	var building_flipped = block.getAttribute("name").split('|')[2].trim();
+	var building_size_x = building_catalog[building_name].width;
+	var building_size_y = building_catalog[building_name].height;
+	if (building_flipped==1) {
+		[building_size_x, building_size_y] = [building_size_y, building_size_x];
+	}
+	for (var i = 0; i < building_size_y ; i++) {
+		for (var j = 0; j < building_size_x ; j++) {
+			var temp_block = document.getElementById((temp_x+j)+"_"+(temp_y+i));
+			temp_block.removeAttribute('style');
+			temp_block.setAttribute("name", "None");
+			temp_block.classList.remove('layout_selection');
+		}
+	}
+}
+
+
+function grid_params_add_building(current_coordinates_x, current_coordinates_y, building_name, flip) { // similar to the grid_block_add_building but for layout importation/pasting
+	if (flip) {
+		flip=1;
+	} else {
+		flip=0;
+	}
+	var building_size_x = building_catalog[building_name].width;
+	var building_size_y = building_catalog[building_name].height;
+	if (flip==1) {
+		[building_size_x, building_size_y] = [building_size_y, building_size_x];
+	}
+	id_building += 1;
+	if (building_catalog[building_name].hasOwnProperty('color')) {
+		var building_color = building_catalog[building_name].color
+	} else {
+		var building_color = colors[Math.floor(Math.random()*colors.length)];
+		// remove the color from the list of available colors
+		colors.splice(colors.indexOf(building_color), 1);
+		// add the color to the object
+		building_catalog[building_name].color = building_color;
+	}
+	for (var i = 0; i < building_size_y ; i++) {
+		for (var j = 0; j < building_size_x ; j++) {
+			var temp_block = document.getElementById((current_coordinates_x+j)+"_"+(current_coordinates_y+i));
+			temp_block.style.backgroundColor = building_color;
+			if(building_size_x > j && j < building_size_x-1 ){
+				temp_block.style.marginRight = 0;
+				temp_block.style.borderTopRightRadius  = 0;
+				temp_block.style.borderBottomRightRadius  = 0;
+				temp_block.style.borderRight = "none";
+			}
+			if(building_size_y > i && i < building_size_y-1 ){
+				temp_block.style.marginBottom = 0;
+				temp_block.style.borderBottomLeftRadius  = 0;
+				temp_block.style.borderBottomRightRadius  = 0;
+				temp_block.style.borderBottom = "none";
+			}
+			if(i > 0){
+				temp_block.style.marginTop = 0;
+				temp_block.style.borderTopLeftRadius  = 0;
+				temp_block.style.borderTopRightRadius  = 0;
+				temp_block.style.borderTop = "none";
+			}
+			if(j > 0){
+				temp_block.style.marginLeft = 0;
+				temp_block.style.borderTopLeftRadius  = 0;
+				temp_block.style.borderBottomLeftRadius  = 0;
+				temp_block.style.borderLeft = "none";
+			}
+			temp_block.setAttribute("name", building_name+'|'+id_building+'|'+flip);
+		}
+	}
+}
+	
+
+function parse_layout_stats(x_size, y_size){
+	var multiplier = 30*60 //production per minute (30 ticks per second, 60 secs per min)
+	var layout_blocks = {}
+	for (var i = 0; i < y_size; i++) {
+		for (var j = 0; j < x_size; j++) {
+			var temp_block = document.getElementById(j+"_"+i);
+			var temp_block_name = temp_block.getAttribute("name")
+			if (layout_blocks.hasOwnProperty(temp_block_name)) {
+				layout_blocks[temp_block_name] += 1
+			} else {
+				layout_blocks[temp_block_name] = 1
+			}
+		}
+	}
+	var layout_buildings = {}
+	var layout_colors = {}
+	for (var i in layout_blocks) {
+		var temp_building_name = i.split('|')[0].trim();
+		//var temp_building_id = i.split('|')[1].trim();
+		if (layout_buildings.hasOwnProperty(temp_building_name)) {
+			layout_buildings[temp_building_name] += 1
+		} else {
+			if (temp_building_name!='None') {
+				layout_buildings[temp_building_name] = 1
+				layout_colors[temp_building_name] = building_catalog[temp_building_name].color;
+			}
+		}
+	}
+	// parse into the buildings table
+	var buildings_table = document.getElementById('buildings_table');
+	buildings_table.innerHTML = '<div class="building_table_header"><div>Color</div><div>Building</div><div>Number</div></div>';
+	for (var i in layout_buildings) {
+		var row = document.createElement("div");
+		var column1 = document.createElement("div");
+		var column2 = document.createElement("div");
+		var column3 = document.createElement("div");
+		column3.style.textAlign = "center";
+		row.className = 'building_table_row';
+    row.name = i;
+    row.onclick = function () {document.getElementById('building_select').value=this.name};
+		column1.style = 'background-color:'+layout_colors[i]
+		var textnode1 = document.createTextNode(' ');
+		var textnode2 = document.createTextNode(i);
+		var textnode3 = document.createTextNode(layout_buildings[i]);
+		column1.appendChild(textnode1);
+		column2.appendChild(textnode2);
+		column3.appendChild(textnode3);
+		row.appendChild(column1);
+		row.appendChild(column2);
+		row.appendChild(column3);
+		buildings_table.appendChild(row);
+	}
+
+	// parse the stats
+	// sa = {'Alien Artifact':5200, 'Aluminum':1200, ...}
+	var sa = {}
+	for (var i in layout_buildings) {
+		for (var j = 0; j < stats[i].length; j++) {
+			var temp_res = stlist[j];
+			var temp_cost = stats[i][j]*layout_buildings[i];
+			if (!sa.hasOwnProperty(temp_res)) {
+				sa[temp_res] = 0
+			}
+			sa[temp_res] += temp_cost;
+		}
+	}
+	var stats_table = document.getElementById('stats_table');
+	sainner = '<div class="row"><div class="col">Layout stats</div>';
+	var layout_reslist = Object.keys(sa);
+	layout_reslist.sort();
+	var row = document.createElement("div");
+	row.className = 'row';
+	for (var i=0;i<layout_reslist.length;i++) {
+		if (i==0) {
+			var temp_elem = document.createElement("div");
+			temp_elem.className = 'col';
+			temp_elem.appendChild(document.createTextNode('Total'));
+			row.appendChild(temp_elem);
+		}
+		if (sa[layout_reslist[i]]!=0) {
+			sainner += '<div class="col">'+layout_reslist[i]+'</div>';
+			var temp_elem = document.createElement("div");
+			temp_elem.className = 'col';
+			temp_elem.appendChild(document.createTextNode(sa[layout_reslist[i]].toLocaleString()));
+			row.appendChild(temp_elem);
+		}
+	}
+	sainner += '</div>';
+	stats_table.innerHTML = sainner;
+	stats_table.appendChild(row);
+	// parse the costs
+	// cs = {'Alien Artifact':5200, 'Aluminum':1200, ...}
+	var cs = {}
+	for (var i in layout_buildings) {
+		for (var j = 0; j < costs[i].length; j++) {
+			var temp_res = reslist[j];
+			var temp_cost = costs[i][j]*layout_buildings[i];
+			if (!cs.hasOwnProperty(temp_res)) {
+				cs[temp_res] = 0
+			}
+			cs[temp_res] += temp_cost;
+		}
+	}
+	var costs_table = document.getElementById('costs_table');
+	ctinner = '<div class="row"><div class="col">Layout cost</div>';
+	var layout_reslist = Object.keys(cs);
+	layout_reslist.sort();
+	var row = document.createElement("div");
+	row.className = 'row';
+	for (var i=0;i<layout_reslist.length;i++) {
+		if (i==0) {
+			var temp_elem = document.createElement("div");
+			temp_elem.className = 'col';
+			temp_elem.appendChild(document.createTextNode('Total'));
+			row.appendChild(temp_elem);
+		}
+		if (cs[layout_reslist[i]]!=0) {
+			ctinner += '<div class="col">'+layout_reslist[i]+'</div>';
+			var temp_elem = document.createElement("div");
+			temp_elem.className = 'col';
+			temp_elem.appendChild(document.createTextNode(cs[layout_reslist[i]].toLocaleString()));
+			row.appendChild(temp_elem);
+		}
+	}
+	ctinner += '</div>';
+	costs_table.innerHTML = ctinner;
+	costs_table.appendChild(row);
+	// parse the prods
+	// pr = {'Alien Artifact':5200, 'Aluminum':1200, ...}
+	var pr = {}
+	for (var i in layout_buildings) {
+		for (var j = 0; j < prods[i].length; j++) {
+			var temp_res = reslist[j];
+			var temp_cost = prods[i][j]*layout_buildings[i];
+			if (!pr.hasOwnProperty(temp_res)) {
+				pr[temp_res] = 0
+			}
+			pr[temp_res] += temp_cost*multiplier;
+		}
+		for (var j = 0; j < smelt[i].length; j++) {
+			var temp_res = reslist[j];
+			var temp_cost = smelt[i][j]*layout_buildings[i];
+			if (!pr.hasOwnProperty(temp_res)) {
+				pr[temp_res] = 0
+			}
+			pr[temp_res] += (temp_cost/multi[i])*multiplier;
+		}
+	}
+	var prods_table = document.getElementById('prods_table');
+	prinner = '<div class="row"><div class="col">Layout production</div>';
+	var layout_reslist = Object.keys(pr);
+	layout_reslist.sort();
+	var row = document.createElement("div");
+	row.className = 'row';
+	for (var i=0;i<layout_reslist.length;i++) {
+		if (i==0) {
+			var temp_elem = document.createElement("div");
+			temp_elem.className = 'col';
+			temp_elem.appendChild(document.createTextNode('Total per minute\n(30 ticks/second)'));
+			row.appendChild(temp_elem);
+		}
+		if (pr[layout_reslist[i]]!=0) {
+			prinner += '<div class="col">'+layout_reslist[i]+'</div>';
+			var temp_elem = document.createElement("div");
+			temp_elem.className = 'col';
+			temp_elem.appendChild(document.createTextNode(Math.round(pr[layout_reslist[i]]).toLocaleString()));
+			row.appendChild(temp_elem);
+		}
+	}
+	prinner += '</div>';
+	prods_table.innerHTML = prinner;
+	prods_table.appendChild(row);
+}
+
+
+function normalize_selection(building_select) { // calculate selection size and move building positions accordingly. building_select = {buildings:[{x:, y:, def:, flipped:}, ...]}
+	var selection_min_x = 102;
+	var selection_max_x = 0;
+	var selection_min_y = 102;
+	var selection_max_y = 0;
+	var normalized_selection = JSON.parse(JSON.stringify(building_select)); // to deepcopy the object
+	for (var i=0; i<normalized_selection.buildings.length;i++) { // loop through selected buildings
+		var temp_building = normalized_selection.buildings[i];
+		if (temp_building.flipped) {
+			var temp_width = building_catalog[temp_building.def].height;
+			var temp_height = building_catalog[temp_building.def].width;
+		} else {
+			var temp_width = building_catalog[temp_building.def].width;
+			var temp_height = building_catalog[temp_building.def].height;
+		}
+		if (temp_building.x+temp_width > selection_max_x) {
+			selection_max_x = temp_building.x+temp_width;
+		}
+		if (temp_building.x < selection_min_x) {
+			selection_min_x = temp_building.x;
+		}
+		if (temp_building.y+temp_height > selection_max_y) {
+			selection_max_y = temp_building.y+temp_height;
+		}
+		if (temp_building.y < selection_min_y) {
+			selection_min_y = temp_building.y;
+		}
+	}
+	for (var i=0; i< normalized_selection.buildings.length; i++) {
+		normalized_selection.buildings[i].x -= selection_min_x;
+		normalized_selection.buildings[i].y -= selection_min_y;
+	}
+	normalized_selection.width = selection_max_x-selection_min_x;
+	normalized_selection.height = selection_max_y-selection_min_y;
+	return normalized_selection;
+}
+
+
+function grid_block_selection_add_building(block, allow_unselect=true) {
+  console.log(building_selection.buildings);
+	var initial_block_name = block.getAttribute("name");
+	var initial_block_coordinates_x = Number(block.id.split("_")[0]);
+	var initial_block_coordinates_y = Number(block.id.split("_")[1]);
+	if (initial_block_name == "None") { // check if it's not a building
+		return;
+	}
+	// find the upper left corner of the building
+	//   find left border
+	var temp_x = initial_block_coordinates_x;
+	while (block.getAttribute("name") == initial_block_name) {
+		temp_x -= 1;
+		if (temp_x==-1) {break;}
+		var block = document.getElementById(temp_x+'_'+initial_block_coordinates_y);
+	}
+	temp_x += 1;
+	//   find top border
+	var block = document.getElementById(initial_block_coordinates_x+'_'+initial_block_coordinates_y);
+	var temp_y = initial_block_coordinates_y;
+	while (block.getAttribute("name") == initial_block_name) {
+		temp_y -= 1;
+		if (temp_y==-1) {break;}
+		var block = document.getElementById(initial_block_coordinates_x+'_'+temp_y);
+	}
+	temp_y += 1;
+	// set block as leftmost & topmost block of building
+	var block = document.getElementById(temp_x+'_'+temp_y);
+	var building_name = block.getAttribute("name").split('|')[0].trim();
+	var building_flipped = block.getAttribute("name").split('|')[2].trim();
+	var building_size_x = building_catalog[building_name].width;
+	var building_size_y = building_catalog[building_name].height;
+	if (building_flipped==1) {
+		[building_size_x, building_size_y] = [building_size_y, building_size_x];
+		var flipped = true;
+	} else {
+		var flipped = false;
+	}
+	already_selected = false;
+	for (var x=temp_x; x< temp_x+building_size_x ;x++) {
+		for (var y=temp_y; y< temp_y+building_size_y; y++) { // if at least one tile of the buidling is selected, unselect all
+			var temp_block = document.getElementById(x+'_'+y);
+			if (temp_block.classList.contains('layout_selection')) {
+				already_selected = true;
+			}
+		}
+	}
+	if (already_selected && allow_unselect) {
+		for (var x=temp_x; x< temp_x+building_size_x ;x++) {
+			for (var y=temp_y; y< temp_y+building_size_y; y++) { // loop through the blocks to remove selection class
+				var temp_block = document.getElementById(x+'_'+y);
+				temp_block.classList.remove('layout_selection');
+			}
+		}
+   var bdidf = temp_x+'|'+temp_y;
+   var pos = building_selection.buildings.map(function(e) { return e.x+'|'+e.y; }).indexOf(bdidf);
+   building_selection.buildings.splice(pos, 1);
+	} else if (!already_selected) {
+		for (var x=temp_x; x< temp_x+building_size_x ;x++) {
+			for (var y=temp_y; y< temp_y+building_size_y; y++) { // loop through the blocks to add selection class
+				var temp_block = document.getElementById(x+'_'+y);
+				temp_block.classList.add('layout_selection');
+			}
+		}
+		building_selection.buildings.push({'x':temp_x, 'y':temp_y, 'def':building_name, 'flipped':flipped});
+	}
+	document.getElementById('layout_selection_text').innerHTML = building_selection.buildings.length+' buildings selected.';
+}
+
+
+function clear_building_selection(){
+	for (var i=0; i<building_selection.buildings.length;i++) { // loop through selected buildings
+		var temp_building = building_selection.buildings[i];
+		if (temp_building.flipped) {
+			var temp_width = building_catalog[temp_building.def].height;
+			var temp_height = building_catalog[temp_building.def].width;
+		} else {
+			var temp_width = building_catalog[temp_building.def].width;
+			var temp_height = building_catalog[temp_building.def].height;
+		}
+		for (var x=temp_building.x; x< temp_building.x+temp_width;x++) {
+			for (var y=temp_building.y; y< temp_building.y+temp_height; y++) { // loop through the blocks to delete selection class
+				var temp_block = document.getElementById(x+'_'+y);
+				temp_block.classList.remove('layout_selection');
+			}
+		}
+	}
+	checkbox_select_mode.checked = false;
+	checkbox_batch_select_mode.checked = false;
+	document.getElementById('button_clear_selection').style.display = "none";
+	document.getElementById('button_delete_selection').style.display = "none";
+	checkbox_batch_select_mode.parentElement.style.display = "none";
+	building_selection = {'width':0, 'height':0, 'buildings':[]};
+	document.getElementById('layout_selection_text').innerHTML = 'Building selection cleared.';
+}
+
+function delete_building_selection() {
+	for (var i=0; i<building_selection.buildings.length;i++) { // loop through selected buildings
+		var temp_building = building_selection.buildings[i];
+		var temp_block = document.getElementById(temp_building.x+'_'+temp_building.y);
+		grid_block_delete_building(temp_block);
+	}
+	clear_building_selection();
+}
+
+
+function export_layout(x_size, y_size) {
+	var layout_buildings = {};
+	for (var j = 0; j < x_size; j++) {
+		for (var i = 0; i < y_size; i++) {
+			var temp_block = document.getElementById(j+"_"+i);
+			var temp_block_name = temp_block.getAttribute("name")
+			if (!layout_buildings.hasOwnProperty(temp_block_name) && temp_block_name!="None") {
+				layout_buildings[temp_block_name] = {'x':j, 'y':i};
+			}
+		}
+	}
+	var export_buildings = [];
+	for (var i in layout_buildings) {
+		var temp_def = i.split('|')[0];
+		if (i.split('|')[2]==1) {
+			var temp_flipped = true;
+		} else {
+			var temp_flipped = false;
+		}
+		export_buildings.push({'x':layout_buildings[i].x, 'y':layout_buildings[i].y, 'def':temp_def, 'flipped':temp_flipped});
+	}
+	var export_contents = {"width":x_size-1,"height":y_size-1,"buildings":export_buildings, "finishedPassableNonUpdatables":{}};
+	// send it as a json file
+	var layout_name = document.getElementById('layout_name') || layout_global_contents.name || 'unnamed_layout';
+	$("<a />", {
+		"download": layout_name+".mcl",
+		"href" : "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(export_contents)),
+	}).appendTo("body").click(function() {
+		$(this).remove() 
+	})[0].click();
+}
+
+// from https://stackoverflow.com/questions/13709482/how-to-read-text-file-in-javascript
+function readText(filePath, callback) {
+    var reader;
+    if (window.File && window.FileReader && window.FileList && window.Blob) {
+        reader = new FileReader();
+    } else {
+        alert('The File APIs are not fully supported by your browser. Fallback required.');
+        return false;
+    }
+    var output = ""; //placeholder for text output
+    if(filePath.files && filePath.files[0]) {           
+        reader.onload = function (e) {
+            output = e.target.result;
+            callback(output);
+        };//end onload()
+        reader.readAsText(filePath.files[0]);
+    }//end if html5 filelist support
+    else { //this is where you could fallback to Java Applet, Flash or similar
+        return false;
+    }       
+    return true;
+}
+
+function decomress_save_file(file_contents) {
+    return LZString.decompressFromEncodedURIComponent(file_contents);
+}
+
+function import_layout_init() {
+	var div_import = document.getElementById('div_import');
+	if (div_import.style.display == "block") {
+		div_import.style.display = "none";
+		document.getElementById('button_import').innerHTML = "Import layout"
+	} else {
+		div_import.style.display = "block";
+		document.getElementById('button_import').innerHTML = "Import layout (click to cancel)"
+	}
+}
+
+
+function paste_layout_init() {
+	var div_paste = document.getElementById('div_paste');
+	if (div_paste.style.display == "block") {
+		div_paste.style.display = "none";
+		document.getElementById('button_paste').innerHTML = "Paste selection"
+	} else {
+		div_paste.style.display = "block";
+		document.getElementById('button_paste').innerHTML = "Paste selection (click to cancel)"
+	}
+}
+
+
+function import_layout(){
+	// remove the fields if they exist
+	import_layout_init();
+	var x_start_coordinate = Number(document.getElementById('import_x_coordinate').value);
+	var y_start_coordinate = Number(document.getElementById('import_y_coordinate').value);
+	try {
+		var element = document.getElementById('import_text');
+		readText(element, function(mcl_contents){
+			// handle compressed files
+			try {
+				mcl_contents = JSON.parse(mcl_contents);
+			} catch (e) {
+				mcl_contents = JSON.parse(LZString.decompressFromEncodedURIComponent(mcl_contents));
+			}
+			grid_build_area(normalize_selection(mcl_contents), x_start_coordinate, y_start_coordinate);
+		});
+	} catch (err) {
+		alert('Error parsing data : '+err)
+		return;
+	}
+}
+
+
+function paste_layout(){
+	// remove the fields if they exist
+	paste_layout_init();
+	var x_start_coordinate = Number(document.getElementById('paste_x_coordinate').value);
+	var y_start_coordinate = Number(document.getElementById('paste_y_coordinate').value);
+	grid_build_area(normalize_selection(building_selection) ,x_start_coordinate, y_start_coordinate);
+}
+
+
+
+function grid_build_area(mcl_contents, x_start_coordinate, y_start_coordinate){ // mcl_contents={'width':xx, 'height':yy, 'buildings':[{'x':, 'y':, 'def':, 'flipped':},...]}
+	// this will print the loaded template/layout in the area
+	var x_size = mcl_contents['width'];
+	var y_size = mcl_contents['height'];
+	if (x_start_coordinate==null || y_start_coordinate==null) {
+		alert('Error parsing data : please specify starting coordinates for the layout');
+		return;
+	}
+	// check if it's not too big
+	if (x_start_coordinate+x_size>grid_size || y_start_coordinate+y_size>grid_size) {
+		alert('Error parsing data : the layout is bigger than the grid size.');
+		return;
+	}
+	// check if the area we are about to fill is empty
+	var area_empty = true;
+	for (var j = x_start_coordinate; j < x_size+x_start_coordinate; j++) {
+		for (var i = y_start_coordinate; i < y_size+y_start_coordinate; i++) {
+			var temp_block = document.getElementById(j+"_"+i);
+			var temp_block_name = temp_block.getAttribute("name")
+			if (temp_block_name!="None") {
+				area_empty = false;
+			}
+		}
+	}
+	if (!area_empty){
+		$("#modal_confirm").modal('show');
+		// reinitialize all the functions attached (no multiple calls)
+		$("#modal_button_yes").off("click"); 
+		$("#modal_button_no").off("click"); 
+		$("#modal_button_yes").on("click", function() {
+			// remove the buildings
+			for (var j = x_start_coordinate; j < x_size+x_start_coordinate; j++) {
+				for (var i = y_start_coordinate; i < y_size+y_start_coordinate; i++) {
+					var temp_block = document.getElementById(j+"_"+i);
+					grid_block_delete_building(temp_block);
+				}
+			}
+			// add the actual buildings
+			buildings_to_add = mcl_contents['buildings'];
+			for (var i = 0; i< buildings_to_add.length; i++) {
+				grid_params_add_building(buildings_to_add[i].x+x_start_coordinate, buildings_to_add[i].y+y_start_coordinate, buildings_to_add[i].def, buildings_to_add[i].flipped);
+			}
+      $("#modal_confirm").modal('hide');
+		});
+    $("#modal_button_no").on("click", function() {
+      $("#modal_confirm").modal('hide');
+		});
+	} else {
+		// add the actual buildings
+		buildings_to_add = mcl_contents['buildings'];
+		for (var i = 0; i< buildings_to_add.length; i++) {
+			grid_params_add_building(buildings_to_add[i].x+x_start_coordinate, buildings_to_add[i].y+y_start_coordinate, buildings_to_add[i].def, buildings_to_add[i].flipped);
+		}
+	}
+	return;
+}
+
+
+function create_new_blank(){
+	$("#modal_createnew").modal('show');
+	// reinitialize all the functions attached (no multiple calls)
+	$("#modal_button_new_yes").off("click"); 
+	$("#modal_button_new_no").off("click"); 
+	$("#modal_button_new_yes").on("click", function() {
+    $("#modal_createnew").modal('hide');
+		save_to_coloniae("{{url_for('tools.layouts_tool', lid=0)}}");
+	});
+	$("#modal_button_new_no").on("click", function() {
+    $("#modal_createnew").modal('hide');
+		$("<a />", {
+		"href" : "{{url_for('tools.layouts_tool', lid=0)}}",
+		}).appendTo("body").click(function() {
+			$(this).remove() 
+		})[0].click();
+	});
+}
+
+
+function show_stats_container(){
+	parse_layout_stats(grid_size, grid_size);
+	document.getElementById("stats_container").style.display = "grid";
+}
+
+function hide_stats_container(){
+	document.getElementById("stats_container").style.display = "none";
+}
+
+function show_about_container(){
+	document.getElementById("about_container").style.display = "grid";
+}
+
+function hide_about_container(){
+	document.getElementById("about_container").style.display = "none";
+}
+
+function load_all_images(current_src, list_done, images_to_load, data_to_send, redirurl) {
+	var canvas = document.getElementById('thumbnail_canvas');
+	var context = canvas.getContext('2d');
+	var size_multiplier = 1;
+	if (grid_size==51) {
+		size_multiplier = 2;
+	}
+	var imageObj = new Image();
+  imageObj.src = current_src;
+  imageObj.centerPos = images_to_load[current_src];
+  imageObj.sizeMulti = size_multiplier;
+  imageObj.onload = function () {
+    // put the image on all the locations it's destined
+    for (var i=0; this.centerPos.length>i; i++) {
+      var centerX = this.centerPos[i][0];
+      var centerY = this.centerPos[i][1];
+      context.drawImage(this, centerX, centerY, 10*this.sizeMulti, 10*this.sizeMulti);
+    }
+    list_done.push(this.src);
+    if (list_done.length<Object.keys(images_to_load).length) {
+        for (s in images_to_load) {
+          if (list_done.indexOf(s)==-1) {
+            var next_src = s;
+            load_all_images(next_src, list_done, images_to_load, data_to_send, redirurl);
+            break;
+          }
+        }
+    } else {
+	      var img_dl = canvas.toDataURL("image/png");
+             console.log(img_dl.length);
+        data_to_send.layout_img = img_dl;
+        send_to_coloniae(data_to_send, redirurl);
+    }
+  };
+}
+
+function save_to_coloniae(redirurl=false){
+	document.getElementById("saving_container").style.display = "grid";
+	var x_size = grid_size;
+	var y_size = grid_size;
+  // for thumbnail
+	var canvas = document.getElementById('thumbnail_canvas');
+	var context = canvas.getContext('2d');
+  context.clearRect(0, 0, canvas.width, canvas.height);
+	var size_multiplier = 1;
+	if (grid_size==51) {
+		size_multiplier = 2;
+	}
+  var images_to_load = {};
+	// prepare layout contents
+	var export_buildings = [];
+	var already_fetched = [];
+	for (var j = 0; j < x_size; j++) {
+		for (var i = 0; i < y_size; i++) {
+			var temp_block = document.getElementById(j+"_"+i);
+			var temp_block_name = temp_block.getAttribute("name");
+			var temp_def = temp_block_name.split('|')[0];
+			if (temp_block_name.split('|')[2]==1) {
+				var temp_flipped = true;
+			} else {
+				var temp_flipped = false;
+			}
+			if (already_fetched.indexOf(temp_block_name)==-1 && temp_block_name!="None") {
+				already_fetched.push(temp_block_name);
+				export_buildings.push({'x':j, 'y':i, 'def':temp_def, 'flipped':temp_flipped});
+			}
+			// put in canvas
+			var current_src = false;
+			for (var k=0; ColonyGame.buildings.length>k; k++) {
+				var temp_bd = ColonyGame.buildings[k];
+				if (temp_bd.name==temp_def) {
+					  current_src = '/static/media/gametiles/'+building_tiles[temp_bd.name];
+	    			break;
+	    		}
+	    	}
+	    	if (current_src) {
+		    	var centerX = (j*10)*size_multiplier;
+		    	var centerY = (i*10)*size_multiplier;
+          if (!images_to_load.hasOwnProperty(current_src)) {
+            images_to_load[current_src] = [];
+          }
+          images_to_load[current_src].push([centerX, centerY]);
+			}
+		}
+	}
+  if (Object.keys(images_to_load).length<1) {
+	  document.getElementById("saving_container").style.display = "none";
+    alert('Won\'t save an empty layout');
+    return;
+  }
+	var export_contents = {"width":x_size-1,"height":y_size-1,"buildings":export_buildings, "finishedPassableNonUpdatables":{}};
+	// prepare specs
+	var multiplier = 30*60;
+	// sa = {'Alien Artifact':5200, 'Aluminum':1200, ...}
+	var sa = {};
+	for (var k = 0; k < export_buildings.length; k++) {
+		i = export_buildings[k];
+		var temp_def = i.def;
+		for (var j = 0; j < stats[temp_def].length; j++) {
+			var temp_res = stlist[j];
+			var temp_cost = stats[temp_def][j];
+			if (!sa.hasOwnProperty(temp_res)) {
+				sa[temp_res] = 0;
+			}
+			sa[temp_res] += temp_cost;
+		}
+	}
+	// pr = {'Alien Artifact':5200, 'Aluminum':1200, ...}
+	var pr = {};
+	for (var k = 0; k < export_buildings.length; k++) {
+		i = export_buildings[k];
+		var temp_def = i.def;
+		for (var j = 0; j < prods[temp_def].length; j++) {
+			var temp_res = reslist[j];
+			var temp_cost = prods[temp_def][j];
+			if (!pr.hasOwnProperty(temp_res)) {
+				pr[temp_res] = 0;
+			}
+			pr[temp_res] += temp_cost*multiplier;
+		}
+		for (var j = 0; j < smelt[temp_def].length; j++) {
+			var temp_res = reslist[j];
+			var temp_cost = smelt[temp_def][j];
+			if (!pr.hasOwnProperty(temp_res)) {
+				pr[temp_res] = 0;
+			}
+			pr[temp_res] += (temp_cost/multi[temp_def])*multiplier;
+		}
+	}
+	// get stats above 0
+	layout_specs = {};
+	layout_specs['Stats'] = {};
+	for (s in sa){
+		if (sa[s]!=0) {
+			layout_specs['Stats'][s] = sa[s];
+		}
+	}
+	temp_prod = {}; // this is a dict {production: 'resources'}
+	// get top 3 produced resources
+	var top3 = Object.values(pr);
+  top3.sort(function(a, b){return b-a});
+	var top3 = top3.slice(0, 3);
+	for (p in pr) {
+		if (top3.indexOf(pr[p])>-1) {
+      if (pr[p]!=0) {
+        if (temp_prod.hasOwnProperty(pr[p])) {
+			    temp_prod[pr[p]] += ', '+p;
+        } else {
+			    temp_prod[pr[p]] = p;
+        }
+      }
+		}
+	}
+  layout_specs['Production'] = {}; //this is dict {'resources': production}
+  for (i in temp_prod) {
+    if (temp_prod[i].length>40) {
+      layout_specs['Production'][temp_prod[i].substring(0,40)+' ...'] = Number(i)
+    } else {
+      layout_specs['Production'][temp_prod[i]] = Number(i)
+    }
+  }
+	// prepare layout name, desc, hidden and id
+	var layout_hide = document.getElementById('checkbox_layout_hidden').checked;
+	if (layout_hide){
+		layout_hide = 1;
+	}
+	var layout_name = document.getElementById('layout_name').value;
+	var layout_desc = document.getElementById('layout_notes').value;
+	var data_to_send = {
+			'layout_desc' : layout_desc,
+			'layout_name': layout_name,
+			'layout_contents': export_contents,
+			'layout_specs': layout_specs,
+			'layout_hide': layout_hide
+		};
+  // load all images
+  load_all_images(Object.keys(images_to_load)[0], [], images_to_load, data_to_send, redirurl);
+ }
+ 
+function send_to_coloniae(data_to_send, redirurl) {
+	var layout_id = document.getElementById('layout_server_id').innerHTML;
+	if (layout_id==''){
+		layout_id = 0;
+	}
+	var xhttp = new XMLHttpRequest();
+	xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			data = JSON.parse(this.responseText);
+	    document.getElementById("saving_container").style.display = "none";
+			alert(data.outcome);
+			if (data.lid) {
+        if (data.lid!=layout_id) {
+          $("<a />", {
+  				"href" : "{{url_for('tools.layouts_tool', lid='')}}"+data.lid,
+  				}).appendTo("body").click(function() {
+  					$(this).remove() 
+  				})[0].click();
+          return;
+        }
+				document.getElementById('layout_server_id').innerHTML = data.lid;
+				document.getElementById('layout_last_save').innerHTML = (new Date(data.ldate*1000)).toLocaleString();
+			}
+			if (redirurl) {
+				$("<a />", {
+				"href" : redirurl,
+				}).appendTo("body").click(function() {
+					$(this).remove() 
+				})[0].click();
+			}
+    }
+	};
+	xhttp.open("POST", "{{url_for('tools.layouts_save', lid='')}}"+layout_id, true);
+	xhttp.setRequestHeader("Content-type", "application/json");
+	xhttp.send(JSON.stringify(data_to_send));
+}
+
+
+var grid_size = 51; // this is the global variable of the grid size. Either 51 or 101. 51 by default.
+var id_building = 0;
+var colors = ['#006666', '#006699', '#0099cc', '#0033cc', '#333399', '#009999', '#00ccff', '#666699', '#339966', '#00cc99', '#00ffcc', '#33ccff', '#6600ff', '#6600cc', '#00cc00', '#66ff99', '#cc99ff', '#336600', '#ffcccc', '#ff66cc', '#ff6600', '#cc6600', '#996600', '#cc9900', '#ffcc00', '#cccc00', '#999966'];
+var building_catalog = {};
+var building_tiles = {};
+var building_flip = {};
+//var checkbox_delete_mode = document.getElementById('checkbox_delete_mode');
+var checkbox_select_mode = document.getElementById('checkbox_select_mode');
+var checkbox_batch_select_mode = document.getElementById('checkbox_batch_select_mode')
+var checkbox_flipped_mode = document.getElementById('checkbox_flipped_mode');
+var costs = {};
+var prods = {};
+var stats = {};
+var multi = {};
+var smelt = {};
+var reslist = [];
+var resl = {};
+var stl = {'Housing':0, 'Jobs':1, 'Entertainment':2, 'Healing':3, 'Education':4, 'Jail capacity':5, 'Transit capacity':6};
+var stlist =  ['Housing', 'Jobs', 'Entertainment', 'Healing', 'Education', 'Jail capacity', 'Transit capacity'];
+var building_selection = {'width':0, 'height':0, 'buildings':[]};
+var mouse_down = false;
+</script>
+{% endblock %}

@@ -1,0 +1,293 @@
+{% extends "squelette.html" %}
+
+{% block titre %}{{name}} (ADU) - Coloniae{% endblock %}
+
+{% block corps %}
+<style>
+.spanlikelinkg {
+    cursor:pointer;
+    color:green;
+    text-decoration:none;
+}
+.spanlikelinkb {
+    cursor:pointer;
+    color:#4183c4;
+    text-decoration:none;
+}
+.spanlikelinkb:hover,.spanlikelinkg:hover {
+    text-decoration:underline;
+}
+</style>
+<div class="ui container fluid">
+    <h1   id="titlename" class="ui center aligned header">{{name}}, a colony of <a target="_blank" href="{{url_for('main.player', username=owner)}}"><span name="badge">{{owner}}</span></a></h1>
+    <div class="ui grid" style="margin-top: 3%">
+      <div class="ten wide column" id="multiplechooserdiv">
+        <table class="ui compact table" id="multiplechooser" style="width:100%"></table> <!--style="max-height:250px;overflow-y:auto" -->
+      </div>
+      <div class="six wide column">
+        <div id="colonymeta"></div>
+      </div>
+    </div>
+    <div class="ui horizontal divider" id="divider_text" style="margin-top: 3%">
+    </div>
+    
+    <div id="main_tab" class="ui top attached tabular menu" style="margin-top: 3%">
+      <a class="item" data-tab="bddiv" onclick="javascript:load_tab('bddiv')">Buildings</a>
+      <a class="item" data-tab="stdiv" onclick="javascript:load_tab('stdiv')">Stats</a>
+      <a class="item active" data-tab="radiv" onclick="javascript:load_tab('radiv')">Resources Amounts</a>
+      <a class="item" data-tab="rsdiv" onclick="javascript:load_tab('rsdiv')">Resources Storage</a>
+      <a class="item" data-tab="vhdiv" onclick="javascript:load_tab('vhdiv')">Vehicles</a>
+      <a class="item" data-tab="sldiv" onclick="javascript:load_tab('sldiv')">Salaries</a>
+    </div>
+    <div class="ui bottom attached tab segment" data-tab="bddiv">
+      <table id="bddiv">
+      </table>
+    </div>
+    <div class="ui bottom attached tab segment" data-tab="stdiv">
+      <table  id="stdiv">
+      </table>
+    </div>
+    <div class="ui bottom attached active tab segment" data-tab="radiv">
+      <table  id="radiv">
+      </table>
+    </div>
+    <div class="ui bottom attached tab segment" data-tab="rsdiv">
+      <table  id="rsdiv">
+      </table>
+    </div>
+    <div class="ui bottom attached tab segment" data-tab="vhdiv">
+      <table  id="vhdiv">
+      </table>
+    </div>
+    <div class="ui bottom attached tab segment" data-tab="sldiv">
+      <table  id="sldiv">
+      </table>
+    </div>
+      
+</div>
+
+<!-- These wont appear -->
+<form id="TheForm" action="{{url_for('adu.adu_draw', charter=charter)}}" target="_blank">
+    <input type="hidden" name="field" value="" />
+    <input type="hidden" name="attribute" value="" />
+    <input type="hidden" name="name" value="" />
+</form>
+
+<div id="modal_explanation" class="ui modal">
+  <i class="close icon"></i>
+  <div class="header">
+    Normalize the ADU values
+  </div>
+  <div class="content">
+    <p>Disparities between the values on the ADU and the real values you see on your colony may occur for various reasons:</p>
+    <ul class="ui list">
+      <li><b>Not all your cities are fetched.</b> This is the most common case. In the game, get into your city (make sure you have the ADU enabled) and wait 1 to 5 minutes depending on the speed of your game. Meanwhile, check your ADU page to see if the city came up.</li>
+      <li><b>You deleted some cities a while ago.</b> During the first few months of 2019 deleting cities was not deleting them on the ADU. This was patched, but if you have a city on the ADU and not on your region the only way is to contact me so I remove it.</li>
+      <li><b>You renamed some cities/your colony a while ago.</b> During the first few months of 2019 renaming cities was not renaming them on the ADU, which meant that the renamed city would've been taken as a new (additionnal) city. This is also the reason some non-region colonies appear as regions. This was patched, but if you have a city on the ADU and not on your region the only way is to contact me so I either rename or delete the old city.</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/se/dt-1.10.20/datatables.min.css"/>
+<script type="text/javascript" src="https://cdn.datatables.net/v/se/dt-1.10.20/datatables.min.js"></script>
+
+<script type="text/javascript" src="/static/lib/timeago/timeago.js"></script>
+
+<script type="text/javascript">
+function load_tab(tabname){
+  var cityname = current_city;
+  document.getElementById('divider_text').innerHTML = cityname;
+  if ($.fn.dataTable.isDataTable('#'+tabname)) {
+      $('#'+tabname).DataTable().destroy();
+  }
+  document.getElementById(tabname).innerHTML = '<div class="ui container fluid"><br><br><br><div class="ui active inverted dimmer"><div class="ui text loader">Loading data from server...</div></div></div>';
+  $.getJSON('{{ url_for('api.aducharterdata', charter=charter) }}?tabname='+tabname+'&cityname='+cityname, function(result){
+    // build table
+    // get all headers
+    var avail_items = [];
+    for (var i=0; i<result.length; i++) {
+      var temp_dict = result[i];
+      for (item in temp_dict) {
+        if (!(avail_items.includes(item)) && item!='timestamp') { // avoid duplicates
+          avail_items.push(item);
+        }
+      }
+    }
+    var table_data = [];
+    for (var i=0; i<avail_items.length; i++) {
+      table_data.push({'item': avail_items[i], title:'Item'});
+      for (var j=0; j<result.length; j++) {
+        table_data[i]['Entry '+String(j+1)] = result[j][avail_items[i]];
+      }
+    }
+    var columns_list = [{data:'item', title:'Item'}];
+    for (var i=0; i<result.length; i++) { // loop through the 7 entries
+      columns_list.push({data: 'Entry '+String(i+1), title: jQuery.timeago(new Date(result[i].timestamp*1000))});
+    }
+    var defs_targets = [];
+    for (var i=0; i<result.length; i++) { // loop through the 7 entries
+      defs_targets.push(i+1);
+    }
+    document.getElementById(tabname).innerHTML = '';
+    $('#'+tabname).DataTable( {
+        data: table_data,
+        columns: columns_list,
+        columnDefs: [ {
+          targets: 0,
+          render: function ( data, type, row ) {
+              return '<span onclick="javascript:openWindowWithPost(\''+tabname+'\',\''+data+'\');" class="spanlikelinkg ">'+data.replace(/_/g, " ")+'</span>';
+          }
+        },{
+          targets: defs_targets,
+          defaultContent: "0",
+          render: function ( data, type, row ) {
+            if (type==='display') {
+              return Number(data) ? Number(data).toLocaleString() : "0";
+            }
+            return data;
+          }
+        }, ],
+        "lengthMenu": [ [25, 50, -1], [25, 50, "All"] ]
+    } );
+  });
+}
+function load_city(cityname){
+  current_city = cityname;
+  // reload current active tab
+  var elems = document.getElementById('main_tab').children;
+  for (var i=0; i<elems.length; i++) {
+    var elem = elems[i];
+    if (elem.className == 'item active') {
+      load_tab(elem.getAttribute('data-tab'));
+    }
+  }
+}
+
+var current_city = '';
+var cities_list = {{ cities_list | tojson }};
+var badges_catalog = {{ badges_catalog | tojson }};
+$( document ).ready(function() {
+  formatBadges();
+  $('#multiplechooser').DataTable( {
+      data: cities_list,
+      columns: [
+          { data: 'name' , title: 'Name'},
+          { data: 'lasttimestamp', title: 'Last Seen' },
+          { data: 'gdp', title: 'GDP' },
+          { data: 'population', title: 'Population' },
+          { data: 'approval', title: 'Approval' },
+          { data: 'unemployment', title: 'Unemployment' }
+      ],
+      columnDefs: [ {
+        targets: 0,
+        render: function ( data, type, row ) {
+            return '<span class="spanlikelinkb" onclick="javascript:load_city(\''+data+'\')">'+data+'</span>'
+        }
+      },{
+        targets: 1,
+        "defaultContent": 0,
+        render: function ( data, type, row ) {
+            if (type=='display') {
+                return (new Date(Number(data)*1000)).toLocaleString();
+            }
+            return data
+        }
+      },{
+        targets: 2,
+        "defaultContent": "",
+        render: function ( data, type, row ) {
+            if (type=='display') {
+                return Number(data).toLocaleString();
+            }
+            return data
+        }
+      },{
+        targets: 3,
+        "defaultContent": "",
+        render: function ( data, type, row ) {
+            if (type=='display') {
+                return Number(data).toLocaleString();
+            }
+            return data
+        }
+      },{
+        targets: 4,
+        "defaultContent": "",
+        render: function ( data, type, row ) {
+            if (type=='display') {
+                return data+' %';
+            }
+            return data
+        }
+      },{
+        targets: 5,
+        "defaultContent": "",
+        render: function ( data, type, row ) {
+            if (type=='display') {
+                return data+' %';
+            }
+            return data
+        }
+      }],
+      order: [[ 1, 'desc' ]],
+      pagingType: "full"
+  } );
+  var is_region = 'no';
+  if (cities_list.length>1) {
+    is_region = 'yes';
+  }
+  // load the overall info
+  // loop through cities to compute total GDP and population and last active and unemployment
+  var total_pop = 0;
+  var total_gdp = 0;
+  var total_unemployed = 0; // absolute, not percentage
+  var total_approval = 0; // absoulte, not percentage
+  var total_lastactive = 0; // timestamp
+  for (var i = cities_list.length - 1; i >= 0; i--) {
+    var t_city = cities_list[i];
+    total_pop += t_city.population;
+    total_gdp += t_city.gdp;
+    total_unemployed += t_city.population*t_city.unemployment/100;
+    total_approval += t_city.population*t_city.approval/100;
+    if (t_city.lasttimestamp>total_lastactive) {
+      total_lastactive = t_city.lasttimestamp;
+    }
+  }
+  document.getElementById('colonymeta').innerHTML = `
+  <table class="ui bordered compact table">
+    <tr><th>Overall stats</th><td><span class="spanlikelinkb" onclick="javascript:$('#modal_explanation').modal('show');"><i class="question circle outline icon"></i>These are not right</span></td></tr>
+    <tr><td>Region</td><td>`+is_region+`</td></tr>
+    <tr><td>Last active</td><td>`+jQuery.timeago(new Date(total_lastactive*1000))+`</td></tr>
+    <tr><td>Population</td><td>`+total_pop.toLocaleString()+`</td></tr>
+    <tr><td>GDP</td><td>`+total_gdp.toLocaleString()+`</td></tr>
+    <tr><td>Unemployment</td><td>`+(total_unemployed*100/total_pop).toFixed(2)+` %</td></tr>
+    <tr><td>Approval rating</td><td>`+(total_approval*100/total_pop).toFixed(2)+` %</td></tr>
+  </table>
+  `;
+  load_city(cities_list[0].name);
+  $('#main_tab .item').tab();
+});
+
+function openWindowWithPost(field, attribute) {
+  field = field.substring(0,2);
+  if (field=='bd' || field=='st' || field=='sl' || field=='vh') {
+    var f = document.getElementById('TheForm');
+    f.field.value = field;
+    f.attribute.value = attribute;
+    f.name.disabled = false;
+    f.name.value = current_city;
+    f.submit();
+  } else {
+    var f = document.getElementById('TheForm');
+    f.field.value = field;
+    f.attribute.value = attribute;
+    f.name.disabled = true;
+    f.submit();
+  }
+    
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+
+    <head>
+    {% block header %}
+      {{ JSGlue.include() }}
+      <!-- Global site tag (gtag.js) - Google Analytics -->
+      <script async src="https://www.googletagmanager.com/gtag/js?id=UA-124248446-1"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+      
+        gtag('config', 'UA-124248446-1');
+      </script>
+      <!-- CSS -->
+      <link rel="stylesheet" href="/static/lib/semantic/semantic.min.css">
+      <!-- Custom CSS -->
+      <link rel="stylesheet" href="/static/css/custom.css">
+      <!-- jQuery library -->
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+      <!-- JavaScript -->
+      <script src="/static/lib/semantic/semantic.min.js"></script> 
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta name="description" content="Coloniae is a website that lets you access a variety of statistics about the game My Colony, from rankings to online market trades.">
+      <link rel="shortcut icon" href="/static/favicon.png" type="image/x-icon">
+      <title>{% block titre %}Coloniae - Untitled page{% endblock %}</title>
+
+    {% endblock %}
+    </head>
+    
+    <body>
+      <!-- modal login -->
+      <div id="modal_login" class="ui modal">
+        <i class="close icon"></i>
+        <div class="content">
+          <div class="ui embed" id="login_embed" data-url="https://www.apewebapps.com/login.php?app=423" data-placeholder="" data-icon="" style="background-color:white;">
+          </div>
+        </div>
+      </div>
+      <!-- modal end -->
+      {% block navigation %}
+      <div class="ui top fixed small menu borderless inverted" id="top_menu" >
+        <a class="item right" href="/">
+          <img class="ui image" src="/static/favicon.png" alt="" style="width:20px"><span class="mobile-hide">Coloniæ</span>
+        </a>
+        <div id="top_search" class="ui category search item fluid" style="width:60%">
+          <div class="ui icon input">
+            <input class="prompt" type="text" placeholder="Search colonies or players...">
+            <i class="search icon"></i>
+          </div>
+          <div class="results"></div>
+        </div>
+        {% if logged_in %}
+        <a class="item left" href="{{url_for('perso.perso_index')}}"><img class="ui mini circular image" style="margin-right: 5px;width: 20px" src="https://accounts.ape-apps.com/getavatar.php?u={{logged_in}}"><span class="mobile-hide">{{logged_in}}</span></a>
+        {% else %}
+        <a class="item left" href="#" onclick="javascript:$('#login_embed').embed('show');$('#modal_login').modal('show');document.getElementById('login_embed').children[0].children[0].scrolling='yes';"><i class="user circle icon"></i>Sign in</a>
+        {% endif %}
+      </div>
+      {% endblock %}
+
+      {% block main_corpus %}
+      <div class="ui main container segment">
+        <div class="mobile-hide">
+          <div class="ui six item menu small inverted">
+            <div class="ui simple dropdown item">
+              Tools
+              <i class="dropdown icon"></i>
+              <div class="menu">
+                <a class="item" href="{{url_for('tools.layouts_index')}}">Layouts</a>
+                <a class="item" href="{{url_for('tools.advcomp')}}">Resource Comparator</a>
+                <a class="item" href="{{url_for('tools.gbt')}}">Online Market</a>
+                <a class="item" href="{{url_for('tools.advanced_search')}}">Database Search</a>
+              </div>
+            </div>
+            <div class="ui simple dropdown item">
+              Stats
+              <i class="dropdown icon"></i>
+              <div class="menu">
+                <a class="item" href="{{url_for('stats.gamestats')}}">Game Stats</a>
+                <a class="item" href="{{url_for('stats.adustats')}}">ADU Stats</a>
+                <a class="item" href="{{url_for('stats.gbtstats')}}">Market Stats</a>
+                <a class="item" href="{{url_for('stats.prices')}}">Market prices History</a>
+              </div>
+            </div>
+            <a class="item" href="{{url_for('lbs.tables')}}">Leaderboard</a>
+            <a class="item" href="{{url_for('adu.adu_index')}}">ADU</a>
+            <a class="item" href="{{url_for('reference.reference_index')}}">Reference</a>
+            <div class="ui simple dropdown item">
+              Integrations
+              <i class="dropdown icon"></i>
+              <div class="menu">
+                <a class="item" href="{{url_for('integrations.discord_index')}}">Discord Bot</a>
+                <a class="item" href="{{url_for('integrations.translation_index')}}">Game Translation</a>
+                <a class="item" href="{{url_for('integrations.rss_feed')}}">RSS feed</a>
+              </div>
+            </div>
+          </div> 
+        </div>
+        <div class="mobile-show">
+          <div class="ui one item menu small inverted">
+            <div class="ui dropdown item" id="mobilemenudropdown">
+              <i class="bars icon"></i></i>Menu
+              <div class="ui vertical menu small">
+                <div class="ui dropdown item">
+                  Tools
+                  <i class="dropdown icon"></i>
+                  <div class="menu">
+                    <a class="item" href="{{url_for('tools.layouts_index')}}">Layouts</a>
+                    <a class="item" href="{{url_for('tools.advcomp')}}">Resource Comparator</a>
+                    <a class="item" href="{{url_for('tools.gbt')}}">Online Market</a>
+                    <a class="item" href="{{url_for('tools.advanced_search')}}">Database Search</a>
+                  </div>
+                </div>
+                <div class="ui dropdown item">
+                  Stats
+                  <i class="dropdown icon"></i>
+                  <div class="menu">
+                    <a class="item" href="{{url_for('stats.gamestats')}}">Game Stats</a>
+                    <a class="item" href="{{url_for('stats.adustats')}}">ADU Stats</a>
+                    <a class="item" href="{{url_for('stats.gbtstats')}}">Market Stats</a>
+                    <a class="item" href="{{url_for('stats.prices')}}">Market prices History</a>
+                  </div>
+                </div>
+                <a class="item" href="{{url_for('lbs.tables')}}">Leaderboard</a>
+                <a class="item" href="{{url_for('adu.adu_index')}}">ADU</a>
+                <a class="item" href="{{url_for('reference.reference_index')}}">Reference</a>
+                <div class="ui dropdown item">
+                  Integrations
+                  <i class="dropdown icon"></i>
+                  <div class="menu">
+                    <a class="item" href="{{url_for('integrations.discord_index')}}">Discord Bot</a>
+                    <a class="item" href="{{url_for('integrations.translation_index')}}">Game Translation</a>
+                    <a class="item" href="{{url_for('integrations.rss_feed')}}">RSS feed</a>
+                  </div>
+                </div>
+              </div> 
+            </div>
+          </div>
+        </div>
+        
+        <div class="ui main container" style="margin-top:3%;margin-bottom: 3%">  
+          {% block corps %}
+          {% endblock %}   
+        </div>
+        <div class="ui segment inverted">
+          {% if logged_in %}
+          <div class="ui center aligned container" style="margin-bottom:20px">
+              <iframe id="ape_chat_iframe" style="width: 100%;height: 275px;border: none;"></iframe>
+          </div>
+          {% endif %}
+          <div class="ui center aligned container">
+              <p><a href="{{url_for('main.about')}}">About - Contact - Contribute</a></p>
+              <p>Coloniae is player-maintained and is not affiliated with Ape Apps in any commercial way.<br>Coloniae uses Google Analytics cookies for statistical purposes. There is no tracking. All the gathered data is totally anonymized.</p>
+          </div>
+        </div>
+      </div>
+      {% endblock %}   
+      
+
+      <footer>
+      {% block footer %}
+      <script type="text/javascript">
+        var _username = {{logged_in|tojson}};
+      </script>
+      <script async type="text/javascript" src="/static/js/squelette.js"></script>
+      <script type="text/javascript" src="/static/js/daily/char_to_name.js"></script>
+      <script type="text/javascript" src="/static/js/daily/char_to_owner.js"></script>
+      {% endblock %}
+      </footer>
+    </body>
+
+    {% block scripts %}
+    {% endblock %}
+
+
+</html>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+    <channel>
+        <title>Coloniae News</title>
+        <link>https://coloniae.space{{url_for('main.main_index')}}</link>
+        <description>Coloniae is a community-made website for the game My Colony.</description>
+            {% for entry in entries %}
+                <item>
+                  <title>{{ entry.title }}</title>
+                  <link> https://coloniae.space{{ url_for('news.news_view', nid=entry.nid) }} </link>
+                  <guid> https://coloniae.space{{ url_for('news.news_view', nid=entry.nid) }} </guid>
+                  <pubDate>{{ entry.published.strftime('%a, %d %b %Y %T %z') }}</pubDate>
+                  <description>{{ entry.description }}</description>
+                  <enclosure url="https://coloniae.space/static/media/uploads/article_banner_{{entry.nid}}.jpg" type="image/jpeg" length="0"></enclosure>
+                </item>
+            {% endfor %}
+    </channel>
+</rss> 
