@@ -1,9 +1,13 @@
 from application import app
+import os
 
-#app.secret_key = 'xNn9T2fbWABfvLrRi0m5'
-app.run(debug=True, host='0.0.0.0')
+is_gunicorn = os.getenv('GUNICORN')
+PORT = os.getenv('PORT')
 
-
-# VIA GUNICORN :
-# if __name__=='main':
-#     app.run()
+if is_gunicorn == 'True':
+    print('Running with gunicorn')
+    if __name__ == 'main':
+        app.run()
+else:
+    print('Running without gunicorn')
+    app.run(debug=True, host='0.0.0.0', port=PORT)
