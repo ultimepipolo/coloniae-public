@@ -297,8 +297,11 @@ def treat_resp(resp, field, attribute):
             for row in resp:
                 try:
                     d = int(row[1])
-                except (TypeError, ValueError):
-                    continue
+                except ValueError:
+                    try:
+                        d = float(row[1])
+                    except (TypeError, ValueError):
+                        continue
                 attribute_chart[attribute].append([row[0] * 1000, d])
         return [{'id': 'series', 'name': attr.replace('_', ' '), 'data': attribute_chart[attr]} for attr in
                 attribute_chart]
