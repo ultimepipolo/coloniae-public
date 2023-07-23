@@ -85,16 +85,54 @@ function change_resleads() {
         if ($.fn.dataTable.isDataTable('#table_main')) {
           $('#table_main').DataTable().destroy();
         }
-        var table_str = '<p>Last updated '+( new Date(Number(result.updated)*1000)).toLocaleString()+'. Updates hourly.</p><table id="table_main" class="ui celled table"><thead><tr><th>Rank</th><th>Name</th><th>Owner</th><th>Amount</th></tr></thead><tbody>';
+        var table_str = '<p>Last updated '+( new Date(Number(result.updated)*1000)).toLocaleString()+'. Updates hourly.</p><table id="table_main" class="ui celled table"><thead><tr><th>Rank</th><th>Name</th><th>Owner</th><th>Amount</th><th>Compact</th></tr></thead><tbody>';
         for (var i=0;result.data.length>i;i++) {
-            // charter is 0, amount is 1, name is 2, ape account is 3.
-            table_str += '<tr><td>'+(i+1)+'</td><td><a href="'+Flask.url_for('adu.adu_view', {"charter":result.data[i][0]})+'">'+result.data[i][2]+'</a></td><td><a href="'+Flask.url_for('main.player', {"username":result.data[i][3]})+'">'+formatThisName(result.data[i][3])+'</a></td><td>'+(result.data[i][1]).toLocaleString('fr')+'</td></tr>';
+            table_str += '<tr><td>'+(i+1)+'</td><td><a href="'+Flask.url_for('adu.adu_view', {"charter":result.data[i][0]})+'">'+result.data[i][2]+'</a></td><td><a href="'+Flask.url_for('main.player', {"username":result.data[i][3]})+'">'+formatThisName(result.data[i][3])+'</a></td><td>'+(result.data[i][1])+'</td><td></td></tr>';
         }
         table_str += '</tbody></table>';
         document.getElementById(element_id).innerHTML = table_str;
-        $('#table_main').DataTable();
+        $('#table_main').DataTable({
+            "order": [[ 0, 'asc' ]],  
+            "lengthMenu": [ [10, 50, -1], [10, 50, "All"] ],
+            "columnDefs": [{
+              "targets": 3,
+              "data": function ( row, type, val, meta ) {
+                if (type === 'set') {
+                  row.amount = val;
+                  row.amount_localestring = val.toLocaleString();
+                  // Store the computed display and filter values for efficiency
+                  return;
+                } else if (type==='display') {
+                    return row.amount_localestring;
+                }
+                // others and undefined all use this
+                return row.amount;
+              }
+            },{
+              "targets": 4,
+              "data": function ( row, type, val, meta ) {
+                if (type === 'set') {
+                  row.amount_compact = transform_mag(row.amount);
+                  // Store the computed display and filter values for efficiency
+                  return;
+                }
+                // others and undefined all use this
+                return row.amount_compact;
+              }
+            } ]
+          });
     });
 };
+
+function transform_mag(num, round_to = 2) {
+    const magnitudes = ['',' k', ' M', ' B', ' T', ' q', ' Q', ' s', ' S', ' O', ' N',' D', ' Un', ' Du', ' Tr', ' qu', ' Qu', ' se', ' Se', ' Oc', ' No',' Vi'];
+    let magnitude = 0;
+    while (Math.abs(num) >= 1000) {
+        magnitude++;
+        num /= 1000;
+    }
+    return `${parseFloat(num).toFixed(round_to)}${magnitudes[magnitude]}`;
+}
 
 function change_utility(util) {
     var element_id = 'container_main';
